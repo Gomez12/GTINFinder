@@ -93,9 +93,110 @@ docker-compose exec -T directus npx directus users passwd --email admin@example.
 docker-compose exec -T directus npx directus users create --email admin@example.com --password admin123 --role administrator
 
 echo "📋 Creating Directus collections..."
-# Import collections from snapshot file
-docker-compose exec -T directus npx directus snapshot apply --yes /directus/collections.json || \
-echo "⚠️  Collections import failed - you may need to create them manually in the Directus UI"
+# Wait a bit more for Directus to be fully ready
+sleep 10
+
+# Create collections via API calls
+echo "Creating gtins collection..."
+docker-compose exec -T directus npx directus schema create --collection gtins --data '{
+  "collection": "gtins",
+  "meta": {
+    "collection": "gtins",
+    "icon": "barcode",
+    "note": "Main GTIN records with validated data",
+    "display_template": "{{gtin}} - {{product_name}}"
+  },
+  "schema": {
+    "gtin": {"type": "string", "length": 14, "unique": true, "required": true},
+    "product_name": {"type": "string", "length": 255},
+    "brand": {"type": "string", "length": 100},
+    "category": {"type": "string", "length": 100},
+    "description": {"type": "text"},
+    "status": {"type": "string", "options": ["pending", "validated", "error"], "default_value": "pending"},
+    "created_at": {"type": "timestamp", "default_value": "$NOW"},
+    "updated_at": {"type": "timestamp"}
+  }
+}' || echo "⚠️  Failed to create gtins collection"
+
+echo "Creating gtin_raw_data collection..."
+docker-compose exec -T directus npx directus schema create --collection gtin_raw_data --data '{
+  "collection": "gtin_raw_data",
+  "meta": {
+    "collection": "gtin_raw_data",
+    "icon": "data",
+    "note": "Raw data from external APIs"
+  },
+  "schema": {
+    "id": {"type": "integer", "primary_key": true, "auto_increment": true},
+    "gtin": {"type": "string", "length": 14},
+    "source": {"type": "string", "length": 50},
+    "raw_data": {"type": "json"},
+    "received_at": {"type": "timestamp", "default_value": "$NOW"}
+  }
+}' || echo "⚠️  Failed to create gtin_raw_data collection"
+
+echo "Creating gtin_golden_records collection..."
+docker-compose exec -T directus npx directus schema create --collection gtin_golden_records --data '{
+  "collection": "gtin_golden_records",
+  "meta": {
+    "collection": "gtin_golden_records",
+    "icon": "star",
+    "note": "Consolidated golden records"
+  },
+  "schema": {
+    "id": {"type": "integer", "primary_key": true, "auto_increment": true},
+    "gtin": {"type": "string", "length": 14, "unique": true},
+    "product_name": {"type": "string", "length": 255},
+    "brand": {"type": "string", "length": 100},
+    "category": {"type": "string", "length": 100},
+    "description": {"type": "text"},
+    "confidence_score": {"type": "float", "default_value": 0.0},
+    "sources_count": {"type": "integer", "default_value": 0},
+    "created_at": {"type": "timestamp", "default_value": "$NOW"},
+    "updated_at": {"type": "timestamp"}
+  }
+}' || echo "⚠️  Failed to create gtin_golden_records collection"
+
+echo "Creating data_sources collection..."
+docker-compose exec -T directus npx directus schema create --collection data_sources --data '{
+  "collection": "data_sources",
+  "meta": {
+    "collection": "data_sources",
+    "icon": "source",
+    "note": "Available data sources"
+  },
+  "schema": {
+    "id": {"type": "integer", "primary_key": true, "auto_increment": true},
+    "name": {"type": "string", "length": 100, "unique": true, "required": true},
+    "api_endpoint": {"type": "string", "length": 255},
+    "api_key_required": {"type": "boolean", "default_value": false},
+    "rate_limit": {"type": "integer", "default_value": 100},
+    "is_active": {"type": "boolean", "default_value": true},
+    "created_at": {"type": "timestamp", "default_value": "$NOW"}
+  }
+}' || echo "⚠️  Failed to create data_sources collection"
+
+echo "Creating data_quality_scores collection..."
+docker-compose exec -T directus npx directus schema create --collection data_quality_scores --data '{
+  "collection": "data_quality_scores",
+  "meta": {
+    "collection": "data_quality_scores",
+    "icon": "analytics",
+    "note": "Data quality metrics"
+  },
+  "schema": {
+    "id": {"type": "integer", "primary_key": true, "auto_increment": true},
+    "gtin": {"type": "string", "length": 14},
+    "source": {"type": "string", "length": 50},
+    "completeness_score": {"type": "float", "default_value": 0.0},
+    "accuracy_score": {"type": "float", "default_value": 0.0},
+    "consistency_score": {"type": "float", "default_value": 0.0},
+    "overall_score": {"type": "float", "default_value": 0.0},
+    "evaluated_at": {"type": "timestamp", "default_value": "$NOW"}
+  }
+}' || echo "⚠️  Failed to create data_quality_scores collection"
+
+echo "✅ Collections creation completed"
 
 echo "🔧 Setting up Authentik admin password..."
 # Wait for Authentik to be ready and reset admin password
