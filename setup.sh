@@ -146,8 +146,8 @@ if [ -n "$ADMIN_TOKEN" ]; then
     
     # Function to create collection
     create_collection() {
-        local collection_json=$1
-        local collection_name=$(echo "$collection_json" | jq -r '.data.collection')
+        local collection_name=$1
+        local collection_meta=$2
         
         if check_collection_exists "$collection_name"; then
             echo "✅ Collection '$collection_name' already exists"
@@ -158,7 +158,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
         local response=$(curl -s -X POST http://localhost:8055/collections \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $ADMIN_TOKEN" \
-            -d "$collection_json")
+            -d "{\"data\":{\"collection\":\"$collection_name\"$collection_meta}}")
         
         if echo "$response" | grep -q '"data"'; then
             echo "✅ Collection '$collection_name' created successfully"
@@ -169,538 +169,606 @@ if [ -n "$ADMIN_TOKEN" ]; then
         fi
     }
     
+    # Function to create field
+    create_field() {
+        local collection_name=$1
+        local field_json=$2
+        
+        echo "📝 Creating field in $collection_name"
+        local response=$(curl -s -X POST http://localhost:8055/fields/$collection_name \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $ADMIN_TOKEN" \
+            -d "$field_json")
+        
+        if echo "$response" | grep -q '"data"'; then
+            echo "✅ Field created successfully"
+            return 0
+        else
+            echo "❌ Failed to create field: $response"
+            return 1
+        fi
+    }
+    
     # Collection 1: gtins
-    create_collection '{
-        "data": {
-            "collection": "gtins",
-            "meta": {
-                "collection": "gtins",
-                "icon": "barcode",
-                "note": "GTIN product information"
-            },
-            "schema": {
-                "name": "gtins"
-            },
-            "fields": [
-                {
-                    "field": "gtin",
-                    "type": "string",
-                    "meta": {
-                        "interface": "input",
-                        "options": {
-                            "length": 14
-                        }
-                    },
-                    "schema": {
-                        "is_primary_key": false,
-                        "has_auto_increment": false,
-                        "length": 14,
-                        "is_unique": true,
-                        "is_nullable": false
+    create_collection "gtins" ',"meta":{"icon":"barcode","note":"GTIN product information"}}'
+    if [ $? -eq 0 ]; then
+        # Create fields for gtins collection
+        create_field "gtins" '{
+            "data": {
+                "field": "gtin",
+                "type": "string",
+                "meta": {
+                    "interface": "input",
+                    "options": {
+                        "length": 14
                     }
                 },
-                {
-                    "field": "product_name",
-                    "type": "string",
-                    "meta": {
-                        "interface": "input"
-                    },
-                    "schema": {
-                        "length": 255,
-                        "is_nullable": true
+                "schema": {
+                    "length": 14,
+                    "is_unique": true,
+                    "is_nullable": false
+                }
+            }
+        }'
+        
+        create_field "gtins" '{
+            "data": {
+                "field": "product_name",
+                "type": "string",
+                "meta": {
+                    "interface": "input"
+                },
+                "schema": {
+                    "length": 255,
+                    "is_nullable": true
+                }
+            }
+        }'
+        
+        create_field "gtins" '{
+            "data": {
+                "field": "brand",
+                "type": "string",
+                "meta": {
+                    "interface": "input"
+                },
+                "schema": {
+                    "length": 100,
+                    "is_nullable": true
+                }
+            }
+        }'
+        
+        create_field "gtins" '{
+            "data": {
+                "field": "category",
+                "type": "string",
+                "meta": {
+                    "interface": "input"
+                },
+                "schema": {
+                    "length": 100,
+                    "is_nullable": true
+                }
+            }
+        }'
+        
+        create_field "gtins" '{
+            "data": {
+                "field": "description",
+                "type": "text",
+                "meta": {
+                    "interface": "input-multiline"
+                },
+                "schema": {
+                    "is_nullable": true
+                }
+            }
+        }'
+        
+        create_field "gtins" '{
+            "data": {
+                "field": "status",
+                "type": "string",
+                "meta": {
+                    "interface": "select-dropdown",
+                    "options": {
+                        "choices": [
+                            {"text": "Pending", "value": "pending"},
+                            {"text": "Validated", "value": "validated"},
+                            {"text": "Error", "value": "error"}
+                        ]
                     }
                 },
-                {
-                    "field": "brand",
-                    "type": "string",
-                    "meta": {
-                        "interface": "input"
-                    },
-                    "schema": {
-                        "length": 100,
-                        "is_nullable": true
-                    }
+                "schema": {
+                    "default_value": "pending",
+                    "is_nullable": false
+                }
+            }
+        }'
+        
+        create_field "gtins" '{
+            "data": {
+                "field": "created_at",
+                "type": "timestamp",
+                "meta": {
+                    "interface": "datetime",
+                    "readonly": true
                 },
-                {
-                    "field": "category",
-                    "type": "string",
-                    "meta": {
-                        "interface": "input"
-                    },
-                    "schema": {
-                        "length": 100,
-                        "is_nullable": true
-                    }
-                },
-                {
-                    "field": "description",
-                    "type": "text",
-                    "meta": {
-                        "interface": "input-multiline"
-                    },
-                    "schema": {
-                        "is_nullable": true
-                    }
-                },
-                {
-                    "field": "status",
-                    "type": "string",
-                    "meta": {
-                        "interface": "select-dropdown",
-                        "options": {
-                            "choices": [
-                                {"text": "Pending", "value": "pending"},
-                                {"text": "Validated", "value": "validated"},
-                                {"text": "Error", "value": "error"}
-                            ]
-                        }
-                    },
-                    "schema": {
-                        "default_value": "pending",
-                        "is_nullable": false
-                    }
-                },
-                {
-                    "field": "created_at",
-                    "type": "timestamp",
-                    "meta": {
-                        "interface": "datetime",
-                        "readonly": true
-                    },
-                    "schema": {
-                        "default_value": {
-                            "function": "now"
-                        }
-                    }
-                },
-                {
-                    "field": "updated_at",
-                    "type": "timestamp",
-                    "meta": {
-                        "interface": "datetime",
-                        "readonly": true
-                    },
-                    "schema": {
-                        "is_nullable": true
+                "schema": {
+                    "default_value": {
+                        "function": "now"
                     }
                 }
-            ]
-        }
-    }'
+            }
+        }'
+        
+        create_field "gtins" '{
+            "data": {
+                "field": "updated_at",
+                "type": "timestamp",
+                "meta": {
+                    "interface": "datetime",
+                    "readonly": true
+                },
+                "schema": {
+                    "is_nullable": true
+                }
+            }
+        }'
+    fi
     
     # Collection 2: gtin_raw_data
-    create_collection '{
-        "data": {
-            "collection": "gtin_raw_data",
-            "meta": {
-                "collection": "gtin_raw_data",
-                "icon": "database",
-                "note": "Raw GTIN data from various sources"
-            },
-            "schema": {
-                "name": "gtin_raw_data"
-            },
-            "fields": [
-                {
-                    "field": "id",
-                    "type": "integer",
-                    "meta": {
-                        "interface": "numeric",
-                        "readonly": true
-                    },
-                    "schema": {
-                        "is_primary_key": true,
-                        "has_auto_increment": true,
-                        "is_nullable": false
-                    }
+    create_collection "gtin_raw_data" ',"meta":{"icon":"database","note":"Raw GTIN data from various sources"}}'
+    if [ $? -eq 0 ]; then
+        create_field "gtin_raw_data" '{
+            "data": {
+                "field": "id",
+                "type": "integer",
+                "meta": {
+                    "interface": "numeric",
+                    "readonly": true
                 },
-                {
-                    "field": "gtin",
-                    "type": "string",
-                    "meta": {
-                        "interface": "input"
-                    },
-                    "schema": {
-                        "length": 14,
-                        "is_nullable": true
-                    }
+                "schema": {
+                    "is_primary_key": true,
+                    "has_auto_increment": true,
+                    "is_nullable": false
+                }
+            }
+        }'
+        
+        create_field "gtin_raw_data" '{
+            "data": {
+                "field": "gtin",
+                "type": "string",
+                "meta": {
+                    "interface": "input"
                 },
-                {
-                    "field": "source",
-                    "type": "string",
-                    "meta": {
-                        "interface": "input"
-                    },
-                    "schema": {
-                        "length": 50,
-                        "is_nullable": true
-                    }
+                "schema": {
+                    "length": 14,
+                    "is_nullable": true
+                }
+            }
+        }'
+        
+        create_field "gtin_raw_data" '{
+            "data": {
+                "field": "source",
+                "type": "string",
+                "meta": {
+                    "interface": "input"
                 },
-                {
-                    "field": "raw_data",
-                    "type": "json",
-                    "meta": {
-                        "interface": "code"
-                    },
-                    "schema": {
-                        "is_nullable": true
-                    }
+                "schema": {
+                    "length": 50,
+                    "is_nullable": true
+                }
+            }
+        }'
+        
+        create_field "gtin_raw_data" '{
+            "data": {
+                "field": "raw_data",
+                "type": "json",
+                "meta": {
+                    "interface": "code"
                 },
-                {
-                    "field": "received_at",
-                    "type": "timestamp",
-                    "meta": {
-                        "interface": "datetime",
-                        "readonly": true
-                    },
-                    "schema": {
-                        "default_value": {
-                            "function": "now"
-                        }
+                "schema": {
+                    "is_nullable": true
+                }
+            }
+        }'
+        
+        create_field "gtin_raw_data" '{
+            "data": {
+                "field": "received_at",
+                "type": "timestamp",
+                "meta": {
+                    "interface": "datetime",
+                    "readonly": true
+                },
+                "schema": {
+                    "default_value": {
+                        "function": "now"
                     }
                 }
-            ]
-        }
-    }'
+            }
+        }'
+    fi
     
     # Collection 3: gtin_golden_records
-    create_collection '{
-        "data": {
-            "collection": "gtin_golden_records",
-            "meta": {
-                "collection": "gtin_golden_records",
-                "icon": "star",
-                "note": "Consolidated GTIN golden records"
-            },
-            "schema": {
-                "name": "gtin_golden_records"
-            },
-            "fields": [
-                {
-                    "field": "id",
-                    "type": "integer",
-                    "meta": {
-                        "interface": "numeric",
-                        "readonly": true
-                    },
-                    "schema": {
-                        "is_primary_key": true,
-                        "has_auto_increment": true,
-                        "is_nullable": false
-                    }
+    create_collection "gtin_golden_records" ',"meta":{"icon":"star","note":"Consolidated GTIN golden records"}}'
+    if [ $? -eq 0 ]; then
+        create_field "gtin_golden_records" '{
+            "data": {
+                "field": "id",
+                "type": "integer",
+                "meta": {
+                    "interface": "numeric",
+                    "readonly": true
                 },
-                {
-                    "field": "gtin",
-                    "type": "string",
-                    "meta": {
-                        "interface": "input"
-                    },
-                    "schema": {
-                        "length": 14,
-                        "is_unique": true,
-                        "is_nullable": false
-                    }
+                "schema": {
+                    "is_primary_key": true,
+                    "has_auto_increment": true,
+                    "is_nullable": false
+                }
+            }
+        }'
+        
+        create_field "gtin_golden_records" '{
+            "data": {
+                "field": "gtin",
+                "type": "string",
+                "meta": {
+                    "interface": "input"
                 },
-                {
-                    "field": "product_name",
-                    "type": "string",
-                    "meta": {
-                        "interface": "input"
-                    },
-                    "schema": {
-                        "length": 255,
-                        "is_nullable": true
-                    }
+                "schema": {
+                    "length": 14,
+                    "is_unique": true,
+                    "is_nullable": false
+                }
+            }
+        }'
+        
+        create_field "gtin_golden_records" '{
+            "data": {
+                "field": "product_name",
+                "type": "string",
+                "meta": {
+                    "interface": "input"
                 },
-                {
-                    "field": "brand",
-                    "type": "string",
-                    "meta": {
-                        "interface": "input"
-                    },
-                    "schema": {
-                        "length": 100,
-                        "is_nullable": true
-                    }
+                "schema": {
+                    "length": 255,
+                    "is_nullable": true
+                }
+            }
+        }'
+        
+        create_field "gtin_golden_records" '{
+            "data": {
+                "field": "brand",
+                "type": "string",
+                "meta": {
+                    "interface": "input"
                 },
-                {
-                    "field": "category",
-                    "type": "string",
-                    "meta": {
-                        "interface": "input"
-                    },
-                    "schema": {
-                        "length": 100,
-                        "is_nullable": true
-                    }
+                "schema": {
+                    "length": 100,
+                    "is_nullable": true
+                }
+            }
+        }'
+        
+        create_field "gtin_golden_records" '{
+            "data": {
+                "field": "category",
+                "type": "string",
+                "meta": {
+                    "interface": "input"
                 },
-                {
-                    "field": "description",
-                    "type": "text",
-                    "meta": {
-                        "interface": "input-multiline"
-                    },
-                    "schema": {
-                        "is_nullable": true
-                    }
+                "schema": {
+                    "length": 100,
+                    "is_nullable": true
+                }
+            }
+        }'
+        
+        create_field "gtin_golden_records" '{
+            "data": {
+                "field": "description",
+                "type": "text",
+                "meta": {
+                    "interface": "input-multiline"
                 },
-                {
-                    "field": "confidence_score",
-                    "type": "float",
-                    "meta": {
-                        "interface": "numeric"
-                    },
-                    "schema": {
-                        "default_value": 0.0,
-                        "is_nullable": false
-                    }
+                "schema": {
+                    "is_nullable": true
+                }
+            }
+        }'
+        
+        create_field "gtin_golden_records" '{
+            "data": {
+                "field": "confidence_score",
+                "type": "float",
+                "meta": {
+                    "interface": "numeric"
                 },
-                {
-                    "field": "sources_count",
-                    "type": "integer",
-                    "meta": {
-                        "interface": "numeric"
-                    },
-                    "schema": {
-                        "default_value": 0,
-                        "is_nullable": false
-                    }
+                "schema": {
+                    "default_value": 0.0,
+                    "is_nullable": false
+                }
+            }
+        }'
+        
+        create_field "gtin_golden_records" '{
+            "data": {
+                "field": "sources_count",
+                "type": "integer",
+                "meta": {
+                    "interface": "numeric"
                 },
-                {
-                    "field": "created_at",
-                    "type": "timestamp",
-                    "meta": {
-                        "interface": "datetime",
-                        "readonly": true
-                    },
-                    "schema": {
-                        "default_value": {
-                            "function": "now"
-                        }
-                    }
+                "schema": {
+                    "default_value": 0,
+                    "is_nullable": false
+                }
+            }
+        }'
+        
+        create_field "gtin_golden_records" '{
+            "data": {
+                "field": "created_at",
+                "type": "timestamp",
+                "meta": {
+                    "interface": "datetime",
+                    "readonly": true
                 },
-                {
-                    "field": "updated_at",
-                    "type": "timestamp",
-                    "meta": {
-                        "interface": "datetime",
-                        "readonly": true
-                    },
-                    "schema": {
-                        "is_nullable": true
+                "schema": {
+                    "default_value": {
+                        "function": "now"
                     }
                 }
-            ]
-        }
-    }'
+            }
+        }'
+        
+        create_field "gtin_golden_records" '{
+            "data": {
+                "field": "updated_at",
+                "type": "timestamp",
+                "meta": {
+                    "interface": "datetime",
+                    "readonly": true
+                },
+                "schema": {
+                    "is_nullable": true
+                }
+            }
+        }'
+    fi
     
     # Collection 4: data_sources
-    create_collection '{
-        "data": {
-            "collection": "data_sources",
-            "meta": {
-                "collection": "data_sources",
-                "icon": "source",
-                "note": "Data source configurations"
-            },
-            "schema": {
-                "name": "data_sources"
-            },
-            "fields": [
-                {
-                    "field": "id",
-                    "type": "integer",
-                    "meta": {
-                        "interface": "numeric",
-                        "readonly": true
-                    },
-                    "schema": {
-                        "is_primary_key": true,
-                        "has_auto_increment": true,
-                        "is_nullable": false
-                    }
+    create_collection "data_sources" ',"meta":{"icon":"source","note":"Data source configurations"}}'
+    if [ $? -eq 0 ]; then
+        create_field "data_sources" '{
+            "data": {
+                "field": "id",
+                "type": "integer",
+                "meta": {
+                    "interface": "numeric",
+                    "readonly": true
                 },
-                {
-                    "field": "name",
-                    "type": "string",
-                    "meta": {
-                        "interface": "input"
-                    },
-                    "schema": {
-                        "length": 100,
-                        "is_unique": true,
-                        "is_nullable": false
-                    }
+                "schema": {
+                    "is_primary_key": true,
+                    "has_auto_increment": true,
+                    "is_nullable": false
+                }
+            }
+        }'
+        
+        create_field "data_sources" '{
+            "data": {
+                "field": "name",
+                "type": "string",
+                "meta": {
+                    "interface": "input"
                 },
-                {
-                    "field": "api_endpoint",
-                    "type": "string",
-                    "meta": {
-                        "interface": "input"
-                    },
-                    "schema": {
-                        "length": 255,
-                        "is_nullable": true
-                    }
+                "schema": {
+                    "length": 100,
+                    "is_unique": true,
+                    "is_nullable": false
+                }
+            }
+        }'
+        
+        create_field "data_sources" '{
+            "data": {
+                "field": "api_endpoint",
+                "type": "string",
+                "meta": {
+                    "interface": "input"
                 },
-                {
-                    "field": "api_key_required",
-                    "type": "boolean",
-                    "meta": {
-                        "interface": "boolean"
-                    },
-                    "schema": {
-                        "default_value": false,
-                        "is_nullable": false
-                    }
+                "schema": {
+                    "length": 255,
+                    "is_nullable": true
+                }
+            }
+        }'
+        
+        create_field "data_sources" '{
+            "data": {
+                "field": "api_key_required",
+                "type": "boolean",
+                "meta": {
+                    "interface": "boolean"
                 },
-                {
-                    "field": "rate_limit",
-                    "type": "integer",
-                    "meta": {
-                        "interface": "numeric"
-                    },
-                    "schema": {
-                        "default_value": 100,
-                        "is_nullable": false
-                    }
+                "schema": {
+                    "default_value": false,
+                    "is_nullable": false
+                }
+            }
+        }'
+        
+        create_field "data_sources" '{
+            "data": {
+                "field": "rate_limit",
+                "type": "integer",
+                "meta": {
+                    "interface": "numeric"
                 },
-                {
-                    "field": "is_active",
-                    "type": "boolean",
-                    "meta": {
-                        "interface": "boolean"
-                    },
-                    "schema": {
-                        "default_value": true,
-                        "is_nullable": false
-                    }
+                "schema": {
+                    "default_value": 100,
+                    "is_nullable": false
+                }
+            }
+        }'
+        
+        create_field "data_sources" '{
+            "data": {
+                "field": "is_active",
+                "type": "boolean",
+                "meta": {
+                    "interface": "boolean"
                 },
-                {
-                    "field": "created_at",
-                    "type": "timestamp",
-                    "meta": {
-                        "interface": "datetime",
-                        "readonly": true
-                    },
-                    "schema": {
-                        "default_value": {
-                            "function": "now"
-                        }
+                "schema": {
+                    "default_value": true,
+                    "is_nullable": false
+                }
+            }
+        }'
+        
+        create_field "data_sources" '{
+            "data": {
+                "field": "created_at",
+                "type": "timestamp",
+                "meta": {
+                    "interface": "datetime",
+                    "readonly": true
+                },
+                "schema": {
+                    "default_value": {
+                        "function": "now"
                     }
                 }
-            ]
-        }
-    }'
+            }
+        }'
+    fi
     
     # Collection 5: data_quality_scores
-    create_collection '{
-        "data": {
-            "collection": "data_quality_scores",
-            "meta": {
-                "collection": "data_quality_scores",
-                "icon": "check-circle",
-                "note": "Data quality assessment scores"
-            },
-            "schema": {
-                "name": "data_quality_scores"
-            },
-            "fields": [
-                {
-                    "field": "id",
-                    "type": "integer",
-                    "meta": {
-                        "interface": "numeric",
-                        "readonly": true
-                    },
-                    "schema": {
-                        "is_primary_key": true,
-                        "has_auto_increment": true,
-                        "is_nullable": false
-                    }
+    create_collection "data_quality_scores" ',"meta":{"icon":"check-circle","note":"Data quality assessment scores"}}'
+    if [ $? -eq 0 ]; then
+        create_field "data_quality_scores" '{
+            "data": {
+                "field": "id",
+                "type": "integer",
+                "meta": {
+                    "interface": "numeric",
+                    "readonly": true
                 },
-                {
-                    "field": "gtin",
-                    "type": "string",
-                    "meta": {
-                        "interface": "input"
-                    },
-                    "schema": {
-                        "length": 14,
-                        "is_nullable": true
-                    }
+                "schema": {
+                    "is_primary_key": true,
+                    "has_auto_increment": true,
+                    "is_nullable": false
+                }
+            }
+        }'
+        
+        create_field "data_quality_scores" '{
+            "data": {
+                "field": "gtin",
+                "type": "string",
+                "meta": {
+                    "interface": "input"
                 },
-                {
-                    "field": "source",
-                    "type": "string",
-                    "meta": {
-                        "interface": "input"
-                    },
-                    "schema": {
-                        "length": 50,
-                        "is_nullable": true
-                    }
+                "schema": {
+                    "length": 14,
+                    "is_nullable": true
+                }
+            }
+        }'
+        
+        create_field "data_quality_scores" '{
+            "data": {
+                "field": "source",
+                "type": "string",
+                "meta": {
+                    "interface": "input"
                 },
-                {
-                    "field": "completeness_score",
-                    "type": "float",
-                    "meta": {
-                        "interface": "numeric"
-                    },
-                    "schema": {
-                        "default_value": 0.0,
-                        "is_nullable": false
-                    }
+                "schema": {
+                    "length": 50,
+                    "is_nullable": true
+                }
+            }
+        }'
+        
+        create_field "data_quality_scores" '{
+            "data": {
+                "field": "completeness_score",
+                "type": "float",
+                "meta": {
+                    "interface": "numeric"
                 },
-                {
-                    "field": "accuracy_score",
-                    "type": "float",
-                    "meta": {
-                        "interface": "numeric"
-                    },
-                    "schema": {
-                        "default_value": 0.0,
-                        "is_nullable": false
-                    }
+                "schema": {
+                    "default_value": 0.0,
+                    "is_nullable": false
+                }
+            }
+        }'
+        
+        create_field "data_quality_scores" '{
+            "data": {
+                "field": "accuracy_score",
+                "type": "float",
+                "meta": {
+                    "interface": "numeric"
                 },
-                {
-                    "field": "consistency_score",
-                    "type": "float",
-                    "meta": {
-                        "interface": "numeric"
-                    },
-                    "schema": {
-                        "default_value": 0.0,
-                        "is_nullable": false
-                    }
+                "schema": {
+                    "default_value": 0.0,
+                    "is_nullable": false
+                }
+            }
+        }'
+        
+        create_field "data_quality_scores" '{
+            "data": {
+                "field": "consistency_score",
+                "type": "float",
+                "meta": {
+                    "interface": "numeric"
                 },
-                {
-                    "field": "overall_score",
-                    "type": "float",
-                    "meta": {
-                        "interface": "numeric"
-                    },
-                    "schema": {
-                        "default_value": 0.0,
-                        "is_nullable": false
-                    }
+                "schema": {
+                    "default_value": 0.0,
+                    "is_nullable": false
+                }
+            }
+        }'
+        
+        create_field "data_quality_scores" '{
+            "data": {
+                "field": "overall_score",
+                "type": "float",
+                "meta": {
+                    "interface": "numeric"
                 },
-                {
-                    "field": "evaluated_at",
-                    "type": "timestamp",
-                    "meta": {
-                        "interface": "datetime",
-                        "readonly": true
-                    },
-                    "schema": {
-                        "default_value": {
-                            "function": "now"
-                        }
+                "schema": {
+                    "default_value": 0.0,
+                    "is_nullable": false
+                }
+            }
+        }'
+        
+        create_field "data_quality_scores" '{
+            "data": {
+                "field": "evaluated_at",
+                "type": "timestamp",
+                "meta": {
+                    "interface": "datetime",
+                    "readonly": true
+                },
+                "schema": {
+                    "default_value": {
+                        "function": "now"
                     }
                 }
-            ]
-        }
-    }'
+            }
+        }'
+    fi
     
     echo "✅ Collections setup completed!"
     echo "🧪 Testing API access to gtins collection..."
