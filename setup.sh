@@ -94,7 +94,9 @@ sleep 15
 # Try to reset existing admin user password first
 echo "Attempting to reset existing admin user password..."
 docker-compose exec -T directus npx directus users passwd --email admin@example.com --password admin123 2>/dev/null
-if [ $? -eq 0 ]; then
+PASSWD_RESULT=$?
+
+if [ $PASSWD_RESULT -eq 0 ]; then
     echo "✅ Admin user password reset successfully"
 else
     echo "Admin user not found, creating new admin user..."
@@ -102,16 +104,19 @@ else
     # Try creating admin user with different approaches
     echo "Method 1: Creating admin user with role..."
     docker-compose exec -T directus npx directus users create --email admin@example.com --password admin123 --role administrator 2>/dev/null
+    CREATE_RESULT1=$?
     
-    if [ $? -ne 0 ]; then
+    if [ $CREATE_RESULT1 -ne 0 ]; then
         echo "Method 2: Creating admin user without role..."
         docker-compose exec -T directus npx directus users create --email admin@example.com --password admin123 2>/dev/null
+        CREATE_RESULT2=$?
         
-        if [ $? -ne 0 ]; then
+        if [ $CREATE_RESULT2 -ne 0 ]; then
             echo "Method 3: Creating admin user with minimal parameters..."
             docker-compose exec -T directus npx directus users create --email admin@example.com --password admin123 --first-name Admin --last-name User 2>/dev/null
+            CREATE_RESULT3=$?
             
-            if [ $? -ne 0 ]; then
+            if [ $CREATE_RESULT3 -ne 0 ]; then
                 echo "⚠️  All admin user creation methods failed"
                 echo "📋 Manual admin user creation required:"
                 echo "1. Go to http://localhost:8055"
