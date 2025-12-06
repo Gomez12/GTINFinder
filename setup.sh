@@ -120,112 +120,605 @@ for i in {1..12}; do
     fi
 done
 
-# Ensure admin user has proper permissions
-echo "🔐 Setting up admin permissions..."
-sleep 5
+echo "📋 Creating Directus collections via API..."
+# Get admin token for API calls
+echo "Getting admin token for collection creation..."
 
-# Skip admin user ID check for now - focus on system token approach
-echo "⚡ Using system token approach for collection creation"
-
-echo "📋 Creating Directus collections..."
-# Wait a bit more for Directus to be fully ready
-sleep 10
-
-# Get admin token for API calls (try different approaches)
-echo "Getting Directus admin token..."
-
-# Method 1: Try to get admin token via login
 ADMIN_TOKEN=$(curl -s -X POST http://localhost:8055/auth/login \
     -H "Content-Type: application/json" \
     -d '{"email":"admin@example.com","password":"admin123"}' | \
     grep -o '"access_token":"[^"]*"' | cut -d'"' -f4 || echo "")
 
 if [ -n "$ADMIN_TOKEN" ]; then
-    echo "✅ Got admin token via login"
-    TOKEN_TYPE="admin"
-    TOKEN="$ADMIN_TOKEN"
-else
-    # Method 2: Try system token with different format
-    SYSTEM_TOKEN=$(grep DIRECTUS_SECRET .env | cut -d'=' -f2)
-    if [ -n "$SYSTEM_TOKEN" ]; then
-        echo "✅ Trying system token"
-        TOKEN_TYPE="system"
-        TOKEN="$SYSTEM_TOKEN"
-        
-        # Test system token with a simple API call
-        TEST_RESPONSE=$(curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8055/server/info)
-        if [[ "$TEST_RESPONSE" != *"project"* ]]; then
-            echo "⚠️  System token test failed, trying shared secret format"
-            # Try with shared secret header instead
-            TOKEN_TYPE="shared"
+    echo "✅ Got admin token, creating collections..."
+    
+    # Function to check if collection exists
+    check_collection_exists() {
+        local collection_name=$1
+        local response=$(curl -s -H "Authorization: Bearer $ADMIN_TOKEN" \
+            http://localhost:8055/collections/$collection_name)
+        if echo "$response" | grep -q '"data"'; then
+            return 0  # Collection exists
+        else
+            return 1  # Collection doesn't exist
         fi
+    }
+    
+    # Function to create collection
+    create_collection() {
+        local collection_json=$1
+        local collection_name=$(echo "$collection_json" | jq -r '.data.collection')
+        
+        if check_collection_exists "$collection_name"; then
+            echo "✅ Collection '$collection_name' already exists"
+            return 0
+        fi
+        
+        echo "📝 Creating collection: $collection_name"
+        local response=$(curl -s -X POST http://localhost:8055/collections \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $ADMIN_TOKEN" \
+            -d "$collection_json")
+        
+        if echo "$response" | grep -q '"data"'; then
+            echo "✅ Collection '$collection_name' created successfully"
+            return 0
+        else
+            echo "❌ Failed to create collection '$collection_name': $response"
+            return 1
+        fi
+    }
+    
+    # Collection 1: gtins
+    create_collection '{
+        "data": {
+            "collection": "gtins",
+            "meta": {
+                "collection": "gtins",
+                "icon": "barcode",
+                "note": "GTIN product information"
+            },
+            "schema": {
+                "name": "gtins"
+            },
+            "fields": [
+                {
+                    "field": "gtin",
+                    "type": "string",
+                    "meta": {
+                        "interface": "input",
+                        "options": {
+                            "length": 14
+                        }
+                    },
+                    "schema": {
+                        "is_primary_key": false,
+                        "has_auto_increment": false,
+                        "length": 14,
+                        "is_unique": true,
+                        "is_nullable": false
+                    }
+                },
+                {
+                    "field": "product_name",
+                    "type": "string",
+                    "meta": {
+                        "interface": "input"
+                    },
+                    "schema": {
+                        "length": 255,
+                        "is_nullable": true
+                    }
+                },
+                {
+                    "field": "brand",
+                    "type": "string",
+                    "meta": {
+                        "interface": "input"
+                    },
+                    "schema": {
+                        "length": 100,
+                        "is_nullable": true
+                    }
+                },
+                {
+                    "field": "category",
+                    "type": "string",
+                    "meta": {
+                        "interface": "input"
+                    },
+                    "schema": {
+                        "length": 100,
+                        "is_nullable": true
+                    }
+                },
+                {
+                    "field": "description",
+                    "type": "text",
+                    "meta": {
+                        "interface": "input-multiline"
+                    },
+                    "schema": {
+                        "is_nullable": true
+                    }
+                },
+                {
+                    "field": "status",
+                    "type": "string",
+                    "meta": {
+                        "interface": "select-dropdown",
+                        "options": {
+                            "choices": [
+                                {"text": "Pending", "value": "pending"},
+                                {"text": "Validated", "value": "validated"},
+                                {"text": "Error", "value": "error"}
+                            ]
+                        }
+                    },
+                    "schema": {
+                        "default_value": "pending",
+                        "is_nullable": false
+                    }
+                },
+                {
+                    "field": "created_at",
+                    "type": "timestamp",
+                    "meta": {
+                        "interface": "datetime",
+                        "readonly": true
+                    },
+                    "schema": {
+                        "default_value": {
+                            "function": "now"
+                        }
+                    }
+                },
+                {
+                    "field": "updated_at",
+                    "type": "timestamp",
+                    "meta": {
+                        "interface": "datetime",
+                        "readonly": true
+                    },
+                    "schema": {
+                        "is_nullable": true
+                    }
+                }
+            ]
+        }
+    }'
+    
+    # Collection 2: gtin_raw_data
+    create_collection '{
+        "data": {
+            "collection": "gtin_raw_data",
+            "meta": {
+                "collection": "gtin_raw_data",
+                "icon": "database",
+                "note": "Raw GTIN data from various sources"
+            },
+            "schema": {
+                "name": "gtin_raw_data"
+            },
+            "fields": [
+                {
+                    "field": "id",
+                    "type": "integer",
+                    "meta": {
+                        "interface": "numeric",
+                        "readonly": true
+                    },
+                    "schema": {
+                        "is_primary_key": true,
+                        "has_auto_increment": true,
+                        "is_nullable": false
+                    }
+                },
+                {
+                    "field": "gtin",
+                    "type": "string",
+                    "meta": {
+                        "interface": "input"
+                    },
+                    "schema": {
+                        "length": 14,
+                        "is_nullable": true
+                    }
+                },
+                {
+                    "field": "source",
+                    "type": "string",
+                    "meta": {
+                        "interface": "input"
+                    },
+                    "schema": {
+                        "length": 50,
+                        "is_nullable": true
+                    }
+                },
+                {
+                    "field": "raw_data",
+                    "type": "json",
+                    "meta": {
+                        "interface": "code"
+                    },
+                    "schema": {
+                        "is_nullable": true
+                    }
+                },
+                {
+                    "field": "received_at",
+                    "type": "timestamp",
+                    "meta": {
+                        "interface": "datetime",
+                        "readonly": true
+                    },
+                    "schema": {
+                        "default_value": {
+                            "function": "now"
+                        }
+                    }
+                }
+            ]
+        }
+    }'
+    
+    # Collection 3: gtin_golden_records
+    create_collection '{
+        "data": {
+            "collection": "gtin_golden_records",
+            "meta": {
+                "collection": "gtin_golden_records",
+                "icon": "star",
+                "note": "Consolidated GTIN golden records"
+            },
+            "schema": {
+                "name": "gtin_golden_records"
+            },
+            "fields": [
+                {
+                    "field": "id",
+                    "type": "integer",
+                    "meta": {
+                        "interface": "numeric",
+                        "readonly": true
+                    },
+                    "schema": {
+                        "is_primary_key": true,
+                        "has_auto_increment": true,
+                        "is_nullable": false
+                    }
+                },
+                {
+                    "field": "gtin",
+                    "type": "string",
+                    "meta": {
+                        "interface": "input"
+                    },
+                    "schema": {
+                        "length": 14,
+                        "is_unique": true,
+                        "is_nullable": false
+                    }
+                },
+                {
+                    "field": "product_name",
+                    "type": "string",
+                    "meta": {
+                        "interface": "input"
+                    },
+                    "schema": {
+                        "length": 255,
+                        "is_nullable": true
+                    }
+                },
+                {
+                    "field": "brand",
+                    "type": "string",
+                    "meta": {
+                        "interface": "input"
+                    },
+                    "schema": {
+                        "length": 100,
+                        "is_nullable": true
+                    }
+                },
+                {
+                    "field": "category",
+                    "type": "string",
+                    "meta": {
+                        "interface": "input"
+                    },
+                    "schema": {
+                        "length": 100,
+                        "is_nullable": true
+                    }
+                },
+                {
+                    "field": "description",
+                    "type": "text",
+                    "meta": {
+                        "interface": "input-multiline"
+                    },
+                    "schema": {
+                        "is_nullable": true
+                    }
+                },
+                {
+                    "field": "confidence_score",
+                    "type": "float",
+                    "meta": {
+                        "interface": "numeric"
+                    },
+                    "schema": {
+                        "default_value": 0.0,
+                        "is_nullable": false
+                    }
+                },
+                {
+                    "field": "sources_count",
+                    "type": "integer",
+                    "meta": {
+                        "interface": "numeric"
+                    },
+                    "schema": {
+                        "default_value": 0,
+                        "is_nullable": false
+                    }
+                },
+                {
+                    "field": "created_at",
+                    "type": "timestamp",
+                    "meta": {
+                        "interface": "datetime",
+                        "readonly": true
+                    },
+                    "schema": {
+                        "default_value": {
+                            "function": "now"
+                        }
+                    }
+                },
+                {
+                    "field": "updated_at",
+                    "type": "timestamp",
+                    "meta": {
+                        "interface": "datetime",
+                        "readonly": true
+                    },
+                    "schema": {
+                        "is_nullable": true
+                    }
+                }
+            ]
+        }
+    }'
+    
+    # Collection 4: data_sources
+    create_collection '{
+        "data": {
+            "collection": "data_sources",
+            "meta": {
+                "collection": "data_sources",
+                "icon": "source",
+                "note": "Data source configurations"
+            },
+            "schema": {
+                "name": "data_sources"
+            },
+            "fields": [
+                {
+                    "field": "id",
+                    "type": "integer",
+                    "meta": {
+                        "interface": "numeric",
+                        "readonly": true
+                    },
+                    "schema": {
+                        "is_primary_key": true,
+                        "has_auto_increment": true,
+                        "is_nullable": false
+                    }
+                },
+                {
+                    "field": "name",
+                    "type": "string",
+                    "meta": {
+                        "interface": "input"
+                    },
+                    "schema": {
+                        "length": 100,
+                        "is_unique": true,
+                        "is_nullable": false
+                    }
+                },
+                {
+                    "field": "api_endpoint",
+                    "type": "string",
+                    "meta": {
+                        "interface": "input"
+                    },
+                    "schema": {
+                        "length": 255,
+                        "is_nullable": true
+                    }
+                },
+                {
+                    "field": "api_key_required",
+                    "type": "boolean",
+                    "meta": {
+                        "interface": "boolean"
+                    },
+                    "schema": {
+                        "default_value": false,
+                        "is_nullable": false
+                    }
+                },
+                {
+                    "field": "rate_limit",
+                    "type": "integer",
+                    "meta": {
+                        "interface": "numeric"
+                    },
+                    "schema": {
+                        "default_value": 100,
+                        "is_nullable": false
+                    }
+                },
+                {
+                    "field": "is_active",
+                    "type": "boolean",
+                    "meta": {
+                        "interface": "boolean"
+                    },
+                    "schema": {
+                        "default_value": true,
+                        "is_nullable": false
+                    }
+                },
+                {
+                    "field": "created_at",
+                    "type": "timestamp",
+                    "meta": {
+                        "interface": "datetime",
+                        "readonly": true
+                    },
+                    "schema": {
+                        "default_value": {
+                            "function": "now"
+                        }
+                    }
+                }
+            ]
+        }
+    }'
+    
+    # Collection 5: data_quality_scores
+    create_collection '{
+        "data": {
+            "collection": "data_quality_scores",
+            "meta": {
+                "collection": "data_quality_scores",
+                "icon": "check-circle",
+                "note": "Data quality assessment scores"
+            },
+            "schema": {
+                "name": "data_quality_scores"
+            },
+            "fields": [
+                {
+                    "field": "id",
+                    "type": "integer",
+                    "meta": {
+                        "interface": "numeric",
+                        "readonly": true
+                    },
+                    "schema": {
+                        "is_primary_key": true,
+                        "has_auto_increment": true,
+                        "is_nullable": false
+                    }
+                },
+                {
+                    "field": "gtin",
+                    "type": "string",
+                    "meta": {
+                        "interface": "input"
+                    },
+                    "schema": {
+                        "length": 14,
+                        "is_nullable": true
+                    }
+                },
+                {
+                    "field": "source",
+                    "type": "string",
+                    "meta": {
+                        "interface": "input"
+                    },
+                    "schema": {
+                        "length": 50,
+                        "is_nullable": true
+                    }
+                },
+                {
+                    "field": "completeness_score",
+                    "type": "float",
+                    "meta": {
+                        "interface": "numeric"
+                    },
+                    "schema": {
+                        "default_value": 0.0,
+                        "is_nullable": false
+                    }
+                },
+                {
+                    "field": "accuracy_score",
+                    "type": "float",
+                    "meta": {
+                        "interface": "numeric"
+                    },
+                    "schema": {
+                        "default_value": 0.0,
+                        "is_nullable": false
+                    }
+                },
+                {
+                    "field": "consistency_score",
+                    "type": "float",
+                    "meta": {
+                        "interface": "numeric"
+                    },
+                    "schema": {
+                        "default_value": 0.0,
+                        "is_nullable": false
+                    }
+                },
+                {
+                    "field": "overall_score",
+                    "type": "float",
+                    "meta": {
+                        "interface": "numeric"
+                    },
+                    "schema": {
+                        "default_value": 0.0,
+                        "is_nullable": false
+                    }
+                },
+                {
+                    "field": "evaluated_at",
+                    "type": "timestamp",
+                    "meta": {
+                        "interface": "datetime",
+                        "readonly": true
+                    },
+                    "schema": {
+                        "default_value": {
+                            "function": "now"
+                        }
+                    }
+                }
+            ]
+        }
+    }'
+    
+    echo "✅ Collections setup completed!"
+    echo "🧪 Testing API access to gtins collection..."
+    TEST_RESPONSE=$(curl -s -H "Authorization: Bearer $ADMIN_TOKEN" http://localhost:8055/items/gtins)
+    if echo "$TEST_RESPONSE" | grep -q '"data"'; then
+        echo "✅ API test successful - gtins collection is accessible"
     else
-        echo "⚠️  Could not get any valid token"
-        TOKEN_TYPE="none"
-        TOKEN=""
+        echo "⚠️  API test failed - collections may need manual verification"
     fi
-fi
-
-echo "⚠️  Directus collections need to be created manually."
-    echo ""
-    echo "📋 Manual setup required:"
+    
+else
+    echo "❌ Failed to get admin token"
+    echo "📋 Manual collection creation required:"
     echo "1. Go to http://localhost:8055"
-    echo "2. Login with:"
-    echo "   Email: admin@example.com"
-    echo "   Password: admin123"
+    echo "2. Login with admin credentials"
     echo "3. Go to Settings > Data Model"
-    echo "4. Create the following collections:"
-    echo ""
-    echo "   Collection 1: gtins"
-    echo "   - Fields: gtin (string, 14 chars, unique, required)"
-    echo "   - Fields: product_name (string, 255 chars)"
-    echo "   - Fields: brand (string, 100 chars)"
-    echo "   - Fields: category (string, 100 chars)"
-    echo "   - Fields: description (text)"
-    echo "   - Fields: status (string, options: pending, validated, error, default: pending)"
-    echo "   - Fields: created_at (timestamp, default: now)"
-    echo "   - Fields: updated_at (timestamp)"
-    echo ""
-    echo "   Collection 2: gtin_raw_data"
-    echo "   - Fields: id (integer, primary key, auto increment)"
-    echo "   - Fields: gtin (string, 14 chars)"
-    echo "   - Fields: source (string, 50 chars)"
-    echo "   - Fields: raw_data (json)"
-    echo "   - Fields: received_at (timestamp, default: now)"
-    echo ""
-    echo "   Collection 3: gtin_golden_records"
-    echo "   - Fields: id (integer, primary key, auto increment)"
-    echo "   - Fields: gtin (string, 14 chars, unique)"
-    echo "   - Fields: product_name (string, 255 chars)"
-    echo "   - Fields: brand (string, 100 chars)"
-    echo "   - Fields: category (string, 100 chars)"
-    echo "   - Fields: description (text)"
-    echo "   - Fields: confidence_score (float, default: 0.0)"
-    echo "   - Fields: sources_count (integer, default: 0)"
-    echo "   - Fields: created_at (timestamp, default: now)"
-    echo "   - Fields: updated_at (timestamp)"
-    echo ""
-    echo "   Collection 4: data_sources"
-    echo "   - Fields: id (integer, primary key, auto increment)"
-    echo "   - Fields: name (string, 100 chars, unique, required)"
-    echo "   - Fields: api_endpoint (string, 255 chars)"
-    echo "   - Fields: api_key_required (boolean, default: false)"
-    echo "   - Fields: rate_limit (integer, default: 100)"
-    echo "   - Fields: is_active (boolean, default: true)"
-    echo "   - Fields: created_at (timestamp, default: now)"
-    echo ""
-    echo "   Collection 5: data_quality_scores"
-    echo "   - Fields: id (integer, primary key, auto increment)"
-    echo "   - Fields: gtin (string, 14 chars)"
-    echo "   - Fields: source (string, 50 chars)"
-    echo "   - Fields: completeness_score (float, default: 0.0)"
-    echo "   - Fields: accuracy_score (float, default: 0.0)"
-    echo "   - Fields: consistency_score (float, default: 0.0)"
-    echo "   - Fields: overall_score (float, default: 0.0)"
-    echo "   - Fields: evaluated_at (timestamp, default: now)"
-    echo ""
-    echo "✅ After creating collections, the API test should work:"
-    echo "   curl http://localhost:8055/items/gtins"
+    echo "4. Create the collections manually"
+fi
 
 echo "🔧 Setting up Authentik admin password..."
 # Wait for Authentik to be ready and reset admin password
