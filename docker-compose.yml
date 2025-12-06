@@ -45,6 +45,7 @@ services:
     volumes:
       - directus_uploads:/directus/uploads
       - directus_extensions:/directus/extensions
+      - ./directus/collections.json:/directus/collections.json:ro
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8055/health || exit 1"]
       interval: 30s

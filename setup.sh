@@ -92,6 +92,11 @@ echo "🔧 Setting up Directus admin user..."
 docker-compose exec -T directus npx directus users passwd --email admin@example.com --password admin123 || \
 docker-compose exec -T directus npx directus users create --email admin@example.com --password admin123 --role administrator
 
+echo "📋 Creating Directus collections..."
+# Import collections from snapshot file
+docker-compose exec -T directus npx directus snapshot apply --yes /directus/collections.json || \
+echo "⚠️  Collections import failed - you may need to create them manually in the Directus UI"
+
 echo "🔧 Setting up Authentik admin password..."
 # Wait for Authentik to be ready and reset admin password
 docker-compose exec -T authentik-server python manage.py shell -c "
