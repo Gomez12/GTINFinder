@@ -94,18 +94,18 @@ echo "⏳ Waiting for Directus to complete initialization and create admin user.
 for i in {1..12}; do
     if curl -s http://localhost:8055/server/info > /dev/null 2>&1; then
         echo "✅ Directus is responding, checking admin user..."
-        
+
         # Test if admin user can login
         LOGIN_RESPONSE=$(curl -s -X POST http://localhost:8055/auth/login \
             -H "Content-Type: application/json" \
             -d '{"email":"admin@example.com","password":"admin123"}')
-        
+
         if echo "$LOGIN_RESPONSE" | grep -q "access_token"; then
             echo "✅ Admin user created successfully and is accessible"
             break
         fi
     fi
-    
+
     if [ $i -eq 12 ]; then
         echo "⚠️ Directus admin user setup incomplete after 2 minutes"
         echo "📋 Manual verification required:"
@@ -131,7 +131,7 @@ ADMIN_TOKEN=$(curl -s -X POST http://localhost:8055/auth/login \
 
 if [ -n "$ADMIN_TOKEN" ]; then
     echo "✅ Got admin token, creating collections..."
-    
+
     # Function to check if collection exists
     check_collection_exists() {
         local collection_name=$1
@@ -143,17 +143,17 @@ if [ -n "$ADMIN_TOKEN" ]; then
             return 1  # Collection doesn't exist
         fi
     }
-    
+
     # Function to create collection
     create_collection() {
         local collection_name=$1
         local collection_meta=$2
-        
+
         if check_collection_exists "$collection_name"; then
             echo "✅ Collection '$collection_name' already exists"
             return 0
         fi
-        
+
         echo "📝 Creating collection: $collection_name"
         # Debug: show the payload being sent
         local payload="{\"data\":{\"collection\":\"$collection_name\"$collection_meta}}"
@@ -162,7 +162,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $ADMIN_TOKEN" \
             -d "$payload")
-        
+
         if echo "$response" | grep -q '"data"'; then
             echo "✅ Collection '$collection_name' created successfully"
             return 0
@@ -171,18 +171,18 @@ if [ -n "$ADMIN_TOKEN" ]; then
             return 1
         fi
     }
-    
+
     # Function to create field
     create_field() {
         local collection_name=$1
         local field_json=$2
-        
+
         echo "📝 Creating field in $collection_name"
         local response=$(curl -s -X POST http://localhost:8055/fields/$collection_name \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $ADMIN_TOKEN" \
             -d "$field_json")
-        
+
         if echo "$response" | grep -q '"data"'; then
             echo "✅ Field created successfully"
             return 0
@@ -191,9 +191,9 @@ if [ -n "$ADMIN_TOKEN" ]; then
             return 1
         fi
     }
-    
+
     # Collection 1: gtins
-    create_collection "gtins" ',"meta":{"icon":"barcode","note":"GTIN product information"}}'
+    create_collection "gtins" ',"meta":{"icon":"barcode","note":"GTIN product information"}'
     if [ $? -eq 0 ]; then
         # Create fields for gtins collection
         create_field "gtins" '{
@@ -213,7 +213,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "gtins" '{
             "data": {
                 "field": "product_name",
@@ -227,7 +227,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "gtins" '{
             "data": {
                 "field": "brand",
@@ -241,7 +241,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "gtins" '{
             "data": {
                 "field": "category",
@@ -255,7 +255,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "gtins" '{
             "data": {
                 "field": "description",
@@ -268,7 +268,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "gtins" '{
             "data": {
                 "field": "status",
@@ -289,7 +289,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "gtins" '{
             "data": {
                 "field": "created_at",
@@ -305,7 +305,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "gtins" '{
             "data": {
                 "field": "updated_at",
@@ -320,9 +320,9 @@ if [ -n "$ADMIN_TOKEN" ]; then
             }
         }'
     fi
-    
+
     # Collection 2: gtin_raw_data
-    create_collection "gtin_raw_data" ',"meta":{"icon":"database","note":"Raw GTIN data from various sources"}}'
+    create_collection "gtin_raw_data" ',"meta":{"icon":"database","note":"Raw GTIN data from various sources"}'
     if [ $? -eq 0 ]; then
         create_field "gtin_raw_data" '{
             "data": {
@@ -339,7 +339,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "gtin_raw_data" '{
             "data": {
                 "field": "gtin",
@@ -353,7 +353,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "gtin_raw_data" '{
             "data": {
                 "field": "source",
@@ -367,7 +367,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "gtin_raw_data" '{
             "data": {
                 "field": "raw_data",
@@ -380,7 +380,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "gtin_raw_data" '{
             "data": {
                 "field": "received_at",
@@ -397,9 +397,9 @@ if [ -n "$ADMIN_TOKEN" ]; then
             }
         }'
     fi
-    
+
     # Collection 3: gtin_golden_records
-    create_collection "gtin_golden_records" ',"meta":{"icon":"star","note":"Consolidated GTIN golden records"}}'
+    create_collection "gtin_golden_records" ',"meta":{"icon":"star","note":"Consolidated GTIN golden records"}'
     if [ $? -eq 0 ]; then
         create_field "gtin_golden_records" '{
             "data": {
@@ -416,7 +416,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "gtin_golden_records" '{
             "data": {
                 "field": "gtin",
@@ -431,7 +431,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "gtin_golden_records" '{
             "data": {
                 "field": "product_name",
@@ -445,7 +445,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "gtin_golden_records" '{
             "data": {
                 "field": "brand",
@@ -459,7 +459,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "gtin_golden_records" '{
             "data": {
                 "field": "category",
@@ -473,7 +473,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "gtin_golden_records" '{
             "data": {
                 "field": "description",
@@ -486,7 +486,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "gtin_golden_records" '{
             "data": {
                 "field": "confidence_score",
@@ -500,7 +500,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "gtin_golden_records" '{
             "data": {
                 "field": "sources_count",
@@ -514,7 +514,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "gtin_golden_records" '{
             "data": {
                 "field": "created_at",
@@ -530,7 +530,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "gtin_golden_records" '{
             "data": {
                 "field": "updated_at",
@@ -545,9 +545,9 @@ if [ -n "$ADMIN_TOKEN" ]; then
             }
         }'
     fi
-    
+
     # Collection 4: data_sources
-    create_collection "data_sources" ',"meta":{"icon":"source","note":"Data source configurations"}}'
+    create_collection "data_sources" ',"meta":{"icon":"source","note":"Data source configurations"}'
     if [ $? -eq 0 ]; then
         create_field "data_sources" '{
             "data": {
@@ -564,7 +564,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "data_sources" '{
             "data": {
                 "field": "name",
@@ -579,7 +579,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "data_sources" '{
             "data": {
                 "field": "api_endpoint",
@@ -593,7 +593,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "data_sources" '{
             "data": {
                 "field": "api_key_required",
@@ -607,7 +607,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "data_sources" '{
             "data": {
                 "field": "rate_limit",
@@ -621,7 +621,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "data_sources" '{
             "data": {
                 "field": "is_active",
@@ -635,7 +635,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "data_sources" '{
             "data": {
                 "field": "created_at",
@@ -652,9 +652,9 @@ if [ -n "$ADMIN_TOKEN" ]; then
             }
         }'
     fi
-    
+
     # Collection 5: data_quality_scores
-    create_collection "data_quality_scores" ',"meta":{"icon":"check-circle","note":"Data quality assessment scores"}}'
+    create_collection "data_quality_scores" ',"meta":{"icon":"check-circle","note":"Data quality assessment scores"}'
     if [ $? -eq 0 ]; then
         create_field "data_quality_scores" '{
             "data": {
@@ -671,7 +671,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "data_quality_scores" '{
             "data": {
                 "field": "gtin",
@@ -685,7 +685,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "data_quality_scores" '{
             "data": {
                 "field": "source",
@@ -699,7 +699,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "data_quality_scores" '{
             "data": {
                 "field": "completeness_score",
@@ -713,7 +713,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "data_quality_scores" '{
             "data": {
                 "field": "accuracy_score",
@@ -727,7 +727,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "data_quality_scores" '{
             "data": {
                 "field": "consistency_score",
@@ -741,7 +741,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "data_quality_scores" '{
             "data": {
                 "field": "overall_score",
@@ -755,7 +755,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 }
             }
         }'
-        
+
         create_field "data_quality_scores" '{
             "data": {
                 "field": "evaluated_at",
@@ -772,7 +772,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
             }
         }'
     fi
-    
+
     echo "✅ Collections setup completed!"
     echo "🧪 Testing API access to gtins collection..."
     TEST_RESPONSE=$(curl -s -H "Authorization: Bearer $ADMIN_TOKEN" http://localhost:8055/items/gtins)
@@ -781,7 +781,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
     else
         echo "⚠️  API test failed - collections may need manual verification"
     fi
-    
+
 else
     echo "❌ Failed to get admin token"
     echo "📋 Manual collection creation required:"
@@ -794,10 +794,10 @@ fi
 echo "🔧 Setting up Authentik admin password..."
 # Wait for Authentik to be ready and reset admin password
 docker-compose exec -T authentik-server python manage.py shell -c "
-from authentik.core.models import User; 
-u = User.objects.get(username='akadmin'); 
-u.set_password('admin123'); 
-u.save(); 
+from authentik.core.models import User;
+u = User.objects.get(username='akadmin');
+u.set_password('admin123');
+u.save();
 print('Password updated for akadmin')
 " || echo "Authentik setup will be completed manually"
 
