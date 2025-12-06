@@ -88,18 +88,45 @@ echo "⏳ Waiting for services to be ready..."
 sleep 30
 
 echo "🔧 Setting up Directus admin user..."
-# Wait for Directus to be ready and create/reset admin user
-sleep 10
+# Wait for Directus to be ready
+sleep 15
 
 # Try to reset existing admin user password first
-docker-compose exec -T directus npx directus users passwd --email admin@example.com --password admin123 2>/dev/null || echo "Admin user not found, will create new one"
-
-# Create new admin user if reset failed
-if ! docker-compose exec -T directus npx directus users passwd --email admin@example.com --password admin123 2>/dev/null; then
-    echo "Creating new admin user..."
-    docker-compose exec -T directus npx directus users create --email admin@example.com --password admin123 --role administrator 2>/dev/null || echo "⚠️  Failed to create admin user with role, trying without role..."
-    # Try without role if that fails
-    docker-compose exec -T directus npx directus users create --email admin@example.com --password admin123 2>/dev/null || echo "⚠️  Failed to create admin user completely"
+echo "Attempting to reset existing admin user password..."
+docker-compose exec -T directus npx directus users passwd --email admin@example.com --password admin123 2>/dev/null
+if [ $? -eq 0 ]; then
+    echo "✅ Admin user password reset successfully"
+else
+    echo "Admin user not found, creating new admin user..."
+    
+    # Try creating admin user with different approaches
+    echo "Method 1: Creating admin user with role..."
+    docker-compose exec -T directus npx directus users create --email admin@example.com --password admin123 --role administrator 2>/dev/null
+    
+    if [ $? -ne 0 ]; then
+        echo "Method 2: Creating admin user without role..."
+        docker-compose exec -T directus npx directus users create --email admin@example.com --password admin123 2>/dev/null
+        
+        if [ $? -ne 0 ]; then
+            echo "Method 3: Creating admin user with minimal parameters..."
+            docker-compose exec -T directus npx directus users create --email admin@example.com --password admin123 --first-name Admin --last-name User 2>/dev/null
+            
+            if [ $? -ne 0 ]; then
+                echo "⚠️  All admin user creation methods failed"
+                echo "📋 Manual admin user creation required:"
+                echo "1. Go to http://localhost:8055"
+                echo "2. Click 'Create Account' or use initial setup"
+                echo "3. Create admin user with email: admin@example.com"
+                echo "4. Set password: admin123"
+            else
+                echo "✅ Admin user created successfully (Method 3)"
+            fi
+        else
+            echo "✅ Admin user created successfully (Method 2)"
+        fi
+    else
+        echo "✅ Admin user created successfully (Method 1)"
+    fi
 fi
 
 # Ensure admin user has proper permissions
