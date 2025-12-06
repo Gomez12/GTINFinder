@@ -88,49 +88,58 @@ echo "⏳ Waiting for services to be ready..."
 sleep 30
 
 echo "🔧 Setting up Directus admin user..."
-# Wait for Directus to be ready
-sleep 15
+# Wait longer for Directus to be fully ready
+echo "Waiting for Directus to complete initialization..."
+sleep 30
 
-# Try to reset existing admin user password first
-echo "Attempting to reset existing admin user password..."
-docker-compose exec -T directus npx directus users passwd --email admin@example.com --password admin123 2>/dev/null
-PASSWD_RESULT=$?
+# Check if Directus is responding
+echo "Checking Directus health..."
+for i in {1..10}; do
+    if curl -s http://localhost:8055/server/info > /dev/null 2>&1; then
+        echo "✅ Directus is responding"
+        break
+    fi
+    if [ $i -eq 10 ]; then
+        echo "⚠️ Directus not responding after 10 attempts"
+        echo "📋 Manual admin user creation required:"
+        echo "1. Go to http://localhost:8055"
+        echo "2. Complete initial setup if prompted"
+        echo "3. Create admin user with email: admin@example.com"
+        echo "4. Set password: admin123"
+        exit 1
+    fi
+    echo "Attempt $i/10 - waiting 10 seconds..."
+    sleep 10
+done
 
-if [ $PASSWD_RESULT -eq 0 ]; then
-    echo "✅ Admin user password reset successfully"
+# Try to create admin user using Directus CLI with proper syntax
+echo "Creating Directus admin user..."
+docker-compose exec -T directus npx directus bootstrap --email admin@example.com --password admin123 2>/dev/null
+BOOTSTRAP_RESULT=$?
+
+if [ $BOOTSTRAP_RESULT -eq 0 ]; then
+    echo "✅ Admin user created successfully via bootstrap"
 else
-    echo "Admin user not found, creating new admin user..."
+    echo "Bootstrap failed, trying alternative method..."
     
-    # Try creating admin user with different approaches
-    echo "Method 1: Creating admin user with role..."
-    docker-compose exec -T directus npx directus users create --email admin@example.com --password admin123 --role administrator 2>/dev/null
-    CREATE_RESULT1=$?
+    # Try using the users create command with proper JSON format
+    docker-compose exec -T directus npx directus users create \
+        --email admin@example.com \
+        --password admin123 \
+        --role administrator \
+        --first-name Admin \
+        --last-name User 2>/dev/null
+    CREATE_RESULT=$?
     
-    if [ $CREATE_RESULT1 -ne 0 ]; then
-        echo "Method 2: Creating admin user without role..."
-        docker-compose exec -T directus npx directus users create --email admin@example.com --password admin123 2>/dev/null
-        CREATE_RESULT2=$?
-        
-        if [ $CREATE_RESULT2 -ne 0 ]; then
-            echo "Method 3: Creating admin user with minimal parameters..."
-            docker-compose exec -T directus npx directus users create --email admin@example.com --password admin123 --first-name Admin --last-name User 2>/dev/null
-            CREATE_RESULT3=$?
-            
-            if [ $CREATE_RESULT3 -ne 0 ]; then
-                echo "⚠️  All admin user creation methods failed"
-                echo "📋 Manual admin user creation required:"
-                echo "1. Go to http://localhost:8055"
-                echo "2. Click 'Create Account' or use initial setup"
-                echo "3. Create admin user with email: admin@example.com"
-                echo "4. Set password: admin123"
-            else
-                echo "✅ Admin user created successfully (Method 3)"
-            fi
-        else
-            echo "✅ Admin user created successfully (Method 2)"
-        fi
+    if [ $CREATE_RESULT -eq 0 ]; then
+        echo "✅ Admin user created successfully via users create"
     else
-        echo "✅ Admin user created successfully (Method 1)"
+        echo "⚠️  Admin user creation failed"
+        echo "📋 Manual admin user creation required:"
+        echo "1. Go to http://localhost:8055"
+        echo "2. Complete initial setup if prompted"
+        echo "3. Create admin user with email: admin@example.com"
+        echo "4. Set password: admin123"
     fi
 fi
 
