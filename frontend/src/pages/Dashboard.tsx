@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../components/auth/AuthProvider';
 import { Button } from '../components/common/Button';
 import { GTINInput } from '../components/gtin/GTINInput';
-import { createGTIN, getGTINs, GTIN } from '../services/directus';
+import { createGTIN, getGTINs } from '../services/directus';
+import type { GTIN } from '../services/directus';
 import { validateGTIN } from '../utils/gtinValidator';
 
 export const Dashboard: React.FC = () => {
