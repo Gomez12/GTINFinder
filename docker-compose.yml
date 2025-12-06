@@ -21,7 +21,7 @@ services:
       start_period: 40s
 
   directus:
-    image: directus/directus:10
+    image: directus/directus:11.13.4
     container_name: gtin-directus
     environment:
       KEY: ${DIRECTUS_KEY}
