@@ -97,7 +97,9 @@ docker-compose exec -T directus npx directus users passwd --email admin@example.
 # Create new admin user if reset failed
 if ! docker-compose exec -T directus npx directus users passwd --email admin@example.com --password admin123 2>/dev/null; then
     echo "Creating new admin user..."
-    docker-compose exec -T directus npx directus users create --email admin@example.com --password admin123 2>/dev/null || echo "⚠️  Failed to create admin user"
+    docker-compose exec -T directus npx directus users create --email admin@example.com --password admin123 --role administrator 2>/dev/null || echo "⚠️  Failed to create admin user with role, trying without role..."
+    # Try without role if that fails
+    docker-compose exec -T directus npx directus users create --email admin@example.com --password admin123 2>/dev/null || echo "⚠️  Failed to create admin user completely"
 fi
 
 # Ensure admin user has proper permissions
@@ -125,12 +127,20 @@ if [ -n "$ADMIN_TOKEN" ]; then
     TOKEN_TYPE="admin"
     TOKEN="$ADMIN_TOKEN"
 else
-    # Method 2: Try system token
+    # Method 2: Try system token with different format
     SYSTEM_TOKEN=$(grep DIRECTUS_SECRET .env | cut -d'=' -f2)
     if [ -n "$SYSTEM_TOKEN" ]; then
         echo "✅ Trying system token"
         TOKEN_TYPE="system"
         TOKEN="$SYSTEM_TOKEN"
+        
+        # Test system token with a simple API call
+        TEST_RESPONSE=$(curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8055/server/info)
+        if [[ "$TEST_RESPONSE" != *"project"* ]]; then
+            echo "⚠️  System token test failed, trying shared secret format"
+            # Try with shared secret header instead
+            TOKEN_TYPE="shared"
+        fi
     else
         echo "⚠️  Could not get any valid token"
         TOKEN_TYPE="none"
@@ -138,163 +148,66 @@ else
     fi
 fi
 
-if [ -z "$TOKEN" ]; then
-    echo "⚠️  Failed to authenticate with Directus. Collections will need to be created manually."
-    echo "Please go to http://localhost:8055 and create the following collections:"
-    echo "- gtins"
-    echo "- gtin_raw_data" 
-    echo "- gtin_golden_records"
-    echo "- data_sources"
-    echo "- data_quality_scores"
-else
-    echo "✅ Got $TOKEN_TYPE token, creating collections via API..."
-    
-    # Create gtins collection
-    echo "Creating gtins collection..."
-    RESPONSE=$(curl -s -X POST http://localhost:8055/collections \
-        -H "Authorization: Bearer $TOKEN" \
-        -H "Content-Type: application/json" \
-        -d '{
-            "collection": "gtins",
-            "meta": {
-                "collection": "gtins",
-                "icon": "barcode",
-                "note": "Main GTIN records with validated data",
-                "display_template": "{{gtin}} - {{product_name}}"
-            },
-            "schema": {
-                "gtin": {"type": "string", "length": 14, "unique": true, "required": true},
-                "product_name": {"type": "string", "length": 255},
-                "brand": {"type": "string", "length": 100},
-                "category": {"type": "string", "length": 100},
-                "description": {"type": "text"},
-                "status": {"type": "string", "options": ["pending", "validated", "error"], "default_value": "pending"},
-                "created_at": {"type": "timestamp", "default_value": "$NOW"},
-                "updated_at": {"type": "timestamp"}
-            }
-        }')
-    if [[ "$RESPONSE" == *"errors"* ]]; then
-        echo "⚠️  Failed to create gtins collection: $RESPONSE"
-    else
-        echo "✅ Created gtins collection"
-    fi
-
-    # Create gtin_raw_data collection
-    echo "Creating gtin_raw_data collection..."
-    RESPONSE=$(curl -s -X POST http://localhost:8055/collections \
-        -H "Authorization: Bearer $TOKEN" \
-        -H "Content-Type: application/json" \
-        -d '{
-            "collection": "gtin_raw_data",
-            "meta": {
-                "collection": "gtin_raw_data",
-                "icon": "data",
-                "note": "Raw data from external APIs"
-            },
-            "schema": {
-                "id": {"type": "integer", "primary_key": true, "auto_increment": true},
-                "gtin": {"type": "string", "length": 14},
-                "source": {"type": "string", "length": 50},
-                "raw_data": {"type": "json"},
-                "received_at": {"type": "timestamp", "default_value": "$NOW"}
-            }
-        }')
-    if [[ "$RESPONSE" == *"errors"* ]]; then
-        echo "⚠️  Failed to create gtin_raw_data collection: $RESPONSE"
-    else
-        echo "✅ Created gtin_raw_data collection"
-    fi
-
-    # Create gtin_golden_records collection
-    echo "Creating gtin_golden_records collection..."
-    RESPONSE=$(curl -s -X POST http://localhost:8055/collections \
-        -H "Authorization: Bearer $TOKEN" \
-        -H "Content-Type: application/json" \
-        -d '{
-            "collection": "gtin_golden_records",
-            "meta": {
-                "collection": "gtin_golden_records",
-                "icon": "star",
-                "note": "Consolidated golden records"
-            },
-            "schema": {
-                "id": {"type": "integer", "primary_key": true, "auto_increment": true},
-                "gtin": {"type": "string", "length": 14, "unique": true},
-                "product_name": {"type": "string", "length": 255},
-                "brand": {"type": "string", "length": 100},
-                "category": {"type": "string", "length": 100},
-                "description": {"type": "text"},
-                "confidence_score": {"type": "float", "default_value": 0.0},
-                "sources_count": {"type": "integer", "default_value": 0},
-                "created_at": {"type": "timestamp", "default_value": "$NOW"},
-                "updated_at": {"type": "timestamp"}
-            }
-        }')
-    if [[ "$RESPONSE" == *"errors"* ]]; then
-        echo "⚠️  Failed to create gtin_golden_records collection: $RESPONSE"
-    else
-        echo "✅ Created gtin_golden_records collection"
-    fi
-
-    # Create data_sources collection
-    echo "Creating data_sources collection..."
-    RESPONSE=$(curl -s -X POST http://localhost:8055/collections \
-        -H "Authorization: Bearer $TOKEN" \
-        -H "Content-Type: application/json" \
-        -d '{
-            "collection": "data_sources",
-            "meta": {
-                "collection": "data_sources",
-                "icon": "source",
-                "note": "Available data sources"
-            },
-            "schema": {
-                "id": {"type": "integer", "primary_key": true, "auto_increment": true},
-                "name": {"type": "string", "length": 100, "unique": true, "required": true},
-                "api_endpoint": {"type": "string", "length": 255},
-                "api_key_required": {"type": "boolean", "default_value": false},
-                "rate_limit": {"type": "integer", "default_value": 100},
-                "is_active": {"type": "boolean", "default_value": true},
-                "created_at": {"type": "timestamp", "default_value": "$NOW"}
-            }
-        }')
-    if [[ "$RESPONSE" == *"errors"* ]]; then
-        echo "⚠️  Failed to create data_sources collection: $RESPONSE"
-    else
-        echo "✅ Created data_sources collection"
-    fi
-
-    # Create data_quality_scores collection
-    echo "Creating data_quality_scores collection..."
-    RESPONSE=$(curl -s -X POST http://localhost:8055/collections \
-        -H "Authorization: Bearer $TOKEN" \
-        -H "Content-Type: application/json" \
-        -d '{
-            "collection": "data_quality_scores",
-            "meta": {
-                "collection": "data_quality_scores",
-                "icon": "analytics",
-                "note": "Data quality metrics"
-            },
-            "schema": {
-                "id": {"type": "integer", "primary_key": true, "auto_increment": true},
-                "gtin": {"type": "string", "length": 14},
-                "source": {"type": "string", "length": 50},
-                "completeness_score": {"type": "float", "default_value": 0.0},
-                "accuracy_score": {"type": "float", "default_value": 0.0},
-                "consistency_score": {"type": "float", "default_value": 0.0},
-                "overall_score": {"type": "float", "default_value": 0.0},
-                "evaluated_at": {"type": "timestamp", "default_value": "$NOW"}
-            }
-        }')
-    if [[ "$RESPONSE" == *"errors"* ]]; then
-        echo "⚠️  Failed to create data_quality_scores collection: $RESPONSE"
-    else
-        echo "✅ Created data_quality_scores collection"
-    fi
-
-    echo "✅ Collections creation completed via API"
-fi
+echo "⚠️  Directus collections need to be created manually."
+    echo ""
+    echo "📋 Manual setup required:"
+    echo "1. Go to http://localhost:8055"
+    echo "2. Login with:"
+    echo "   Email: admin@example.com"
+    echo "   Password: admin123"
+    echo "3. Go to Settings > Data Model"
+    echo "4. Create the following collections:"
+    echo ""
+    echo "   Collection 1: gtins"
+    echo "   - Fields: gtin (string, 14 chars, unique, required)"
+    echo "   - Fields: product_name (string, 255 chars)"
+    echo "   - Fields: brand (string, 100 chars)"
+    echo "   - Fields: category (string, 100 chars)"
+    echo "   - Fields: description (text)"
+    echo "   - Fields: status (string, options: pending, validated, error, default: pending)"
+    echo "   - Fields: created_at (timestamp, default: now)"
+    echo "   - Fields: updated_at (timestamp)"
+    echo ""
+    echo "   Collection 2: gtin_raw_data"
+    echo "   - Fields: id (integer, primary key, auto increment)"
+    echo "   - Fields: gtin (string, 14 chars)"
+    echo "   - Fields: source (string, 50 chars)"
+    echo "   - Fields: raw_data (json)"
+    echo "   - Fields: received_at (timestamp, default: now)"
+    echo ""
+    echo "   Collection 3: gtin_golden_records"
+    echo "   - Fields: id (integer, primary key, auto increment)"
+    echo "   - Fields: gtin (string, 14 chars, unique)"
+    echo "   - Fields: product_name (string, 255 chars)"
+    echo "   - Fields: brand (string, 100 chars)"
+    echo "   - Fields: category (string, 100 chars)"
+    echo "   - Fields: description (text)"
+    echo "   - Fields: confidence_score (float, default: 0.0)"
+    echo "   - Fields: sources_count (integer, default: 0)"
+    echo "   - Fields: created_at (timestamp, default: now)"
+    echo "   - Fields: updated_at (timestamp)"
+    echo ""
+    echo "   Collection 4: data_sources"
+    echo "   - Fields: id (integer, primary key, auto increment)"
+    echo "   - Fields: name (string, 100 chars, unique, required)"
+    echo "   - Fields: api_endpoint (string, 255 chars)"
+    echo "   - Fields: api_key_required (boolean, default: false)"
+    echo "   - Fields: rate_limit (integer, default: 100)"
+    echo "   - Fields: is_active (boolean, default: true)"
+    echo "   - Fields: created_at (timestamp, default: now)"
+    echo ""
+    echo "   Collection 5: data_quality_scores"
+    echo "   - Fields: id (integer, primary key, auto increment)"
+    echo "   - Fields: gtin (string, 14 chars)"
+    echo "   - Fields: source (string, 50 chars)"
+    echo "   - Fields: completeness_score (float, default: 0.0)"
+    echo "   - Fields: accuracy_score (float, default: 0.0)"
+    echo "   - Fields: consistency_score (float, default: 0.0)"
+    echo "   - Fields: overall_score (float, default: 0.0)"
+    echo "   - Fields: evaluated_at (timestamp, default: now)"
+    echo ""
+    echo "✅ After creating collections, the API test should work:"
+    echo "   curl http://localhost:8055/items/gtins"
 
 echo "🔧 Setting up Authentik admin password..."
 # Wait for Authentik to be ready and reset admin password
