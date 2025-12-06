@@ -89,8 +89,16 @@ sleep 30
 
 echo "🔧 Setting up Directus admin user..."
 # Wait for Directus to be ready and create/reset admin user
-docker-compose exec -T directus npx directus users passwd --email admin@example.com --password admin123 || \
-docker-compose exec -T directus npx directus users create --email admin@example.com --password admin123 --role administrator
+sleep 10
+
+# Try to reset existing admin user password first
+docker-compose exec -T directus npx directus users passwd --email admin@example.com --password admin123 2>/dev/null || echo "Admin user not found, will create new one"
+
+# Create new admin user if reset failed
+if ! docker-compose exec -T directus npx directus users passwd --email admin@example.com --password admin123 2>/dev/null; then
+    echo "Creating new admin user..."
+    docker-compose exec -T directus npx directus users create --email admin@example.com --password admin123 2>/dev/null || echo "⚠️  Failed to create admin user"
+fi
 
 # Ensure admin user has proper permissions
 echo "🔐 Setting up admin permissions..."
