@@ -65,6 +65,8 @@ services:
       AIRFLOW__WEBSERVER__RBAC: 'true'
       AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
       AIRFLOW__API__AUTH_BACKEND: 'airflow.api.auth.backend.basic_auth'
+      AIRFLOW__CELERY__BROKER_URL: 'redis://redis:6379/0'
+      AIRFLOW__CELERY__RESULT_BACKEND: 'redis://redis:6379/0'
       AIRFLOW__CORE__ENABLE_XCOM_PICKLING: 'true'
       _AIRFLOW_DB_UPGRADE: 'true'
       _AIRFLOW_WWW_USER_CREATE: 'true'
@@ -75,6 +77,8 @@ services:
     networks:
       - gtin-finder-network
     depends_on:
+      redis:
+        condition: service_healthy
       postgresql:
         condition: service_healthy
     volumes:
@@ -107,12 +111,17 @@ services:
       AUTHENTIK_ERROR_REPORTING__ENABLED: 'false'
       AUTHENTIK_EMAIL__HOST: 'localhost'
       AUTHENTIK_EMAIL__PORT: 1025
+      AUTHENTIK_REDIS__HOST: redis
+      AUTHENTIK_REDIS__PORT: 6379
+      AUTHENTIK_REDIS__DB: 0
     ports:
       - "9000:9000"
       - "9443:9443"
     networks:
       - gtin-finder-network
     depends_on:
+      redis:
+        condition: service_healthy
       postgresql:
         condition: service_healthy
     volumes:
