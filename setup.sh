@@ -155,10 +155,13 @@ if [ -n "$ADMIN_TOKEN" ]; then
         fi
         
         echo "📝 Creating collection: $collection_name"
+        # Debug: show the payload being sent
+        local payload="{\"data\":{\"collection\":\"$collection_name\"$collection_meta}}"
+        echo "DEBUG: Payload being sent: $payload"
         local response=$(curl -s -X POST http://localhost:8055/collections \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $ADMIN_TOKEN" \
-            -d "{\"data\":{\"collection\":\"$collection_name\"$collection_meta}}")
+            -d "$payload")
         
         if echo "$response" | grep -q '"data"'; then
             echo "✅ Collection '$collection_name' created successfully"
