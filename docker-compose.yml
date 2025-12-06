@@ -57,7 +57,7 @@ services:
     container_name: gtin-airflow
     environment:
       AIRFLOW__CORE__EXECUTOR: 'LocalExecutor'
-      AIRFLOW__CORE__SQL_ALCHEMY_CONN: 'postgresql+psycopg2://${AIRFLOW_USER}:${AIRFLOW_PASSWORD}@postgresql:5432/${AIRFLOW_DB}'
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: 'postgresql+psycopg2://airflow_user:airflow_secure_password@postgresql:5432/airflow'
       AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
       AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
@@ -86,7 +86,7 @@ services:
     command: >
       bash -c "
         airflow db migrate &&
-        airflow users create -r Admin -u ${AIRFLOW_USER} -e admin@example.com -f Admin -l User -p ${AIRFLOW_PASSWORD} ||
+        airflow users create --role Admin --username airflow_user --email admin@example.com --firstname Admin --lastname User --password airflow_secure_password ||
         true &&
         airflow scheduler &
         exec airflow api-server
