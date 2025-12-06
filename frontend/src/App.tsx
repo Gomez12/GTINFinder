@@ -25,25 +25,25 @@ const AppContent: React.FC = () => {
   return (
     <Router>
       <Routes>
-        <Route 
-          path="/login" 
+        <Route
+          path="/login"
           element={
             isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />
-          } 
+          }
         />
-        <Route 
-          path="/dashboard" 
+        <Route
+          path="/dashboard"
           element={
             <ProtectedRoute>
               <Dashboard />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/" 
+        <Route
+          path="/"
           element={
             <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />
-          } 
+          }
         />
       </Routes>
     </Router>
