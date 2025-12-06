@@ -92,25 +92,32 @@ echo "🔧 Setting up Directus admin user..."
 docker-compose exec -T directus npx directus users passwd --email admin@example.com --password admin123 || \
 docker-compose exec -T directus npx directus users create --email admin@example.com --password admin123 --role administrator
 
+# Ensure admin user has proper permissions
+echo "🔐 Setting up admin permissions..."
+sleep 5
+
+# Get admin user ID and ensure they have admin role
+ADMIN_USER_ID=$(docker-compose exec -T directus npx directus users list --filter 'email=admin@example.com' --fields id 2>/dev/null | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4 || echo "")
+
+if [ -n "$ADMIN_USER_ID" ]; then
+    echo "Found admin user ID: $ADMIN_USER_ID"
+    # Try to update user role to administrator
+    docker-compose exec -T directus npx directus users update --id "$ADMIN_USER_ID" --data '{"role":"administrator"}' 2>/dev/null || echo "⚠️  Could not update user role"
+else
+    echo "⚠️  Could not find admin user ID"
+fi
+
 echo "📋 Creating Directus collections..."
 # Wait a bit more for Directus to be fully ready
 sleep 10
 
-# Get admin token for API calls
-echo "Getting Directus admin token..."
-ADMIN_TOKEN=$(docker-compose exec -T directus npx directus utils get-token --email admin@example.com --password admin123 2>/dev/null || echo "")
+# Get system token for API calls (required for collection creation)
+echo "Getting Directus system token..."
+SYSTEM_TOKEN=$(grep DIRECTUS_SECRET .env | cut -d'=' -f2)
 
-if [ -z "$ADMIN_TOKEN" ]; then
-    echo "⚠️  Could not get admin token, trying alternative method..."
-    # Try to get token via curl
-    ADMIN_TOKEN=$(curl -s -X POST http://localhost:8055/auth/login \
-        -H "Content-Type: application/json" \
-        -d '{"email":"admin@example.com","password":"admin123"}' | \
-        grep -o '"access_token":"[^"]*"' | cut -d'"' -f4 || echo "")
-fi
-
-if [ -z "$ADMIN_TOKEN" ]; then
-    echo "⚠️  Failed to authenticate with Directus. Collections will need to be created manually."
+if [ -z "$SYSTEM_TOKEN" ]; then
+    echo "⚠️  Could not find DIRECTUS_SECRET in .env file"
+    echo "⚠️  Collections will need to be created manually."
     echo "Please go to http://localhost:8055 and create the following collections:"
     echo "- gtins"
     echo "- gtin_raw_data" 
@@ -118,12 +125,12 @@ if [ -z "$ADMIN_TOKEN" ]; then
     echo "- data_sources"
     echo "- data_quality_scores"
 else
-    echo "✅ Got admin token, creating collections via API..."
+    echo "✅ Got system token, creating collections via API..."
     
     # Create gtins collection
     echo "Creating gtins collection..."
     curl -s -X POST http://localhost:8055/collections \
-        -H "Authorization: Bearer $ADMIN_TOKEN" \
+        -H "Authorization: Bearer $SYSTEM_TOKEN" \
         -H "Content-Type: application/json" \
         -d '{
             "collection": "gtins",
@@ -148,7 +155,7 @@ else
     # Create gtin_raw_data collection
     echo "Creating gtin_raw_data collection..."
     curl -s -X POST http://localhost:8055/collections \
-        -H "Authorization: Bearer $ADMIN_TOKEN" \
+        -H "Authorization: Bearer $SYSTEM_TOKEN" \
         -H "Content-Type: application/json" \
         -d '{
             "collection": "gtin_raw_data",
@@ -169,7 +176,7 @@ else
     # Create gtin_golden_records collection
     echo "Creating gtin_golden_records collection..."
     curl -s -X POST http://localhost:8055/collections \
-        -H "Authorization: Bearer $ADMIN_TOKEN" \
+        -H "Authorization: Bearer $SYSTEM_TOKEN" \
         -H "Content-Type: application/json" \
         -d '{
             "collection": "gtin_golden_records",
@@ -195,7 +202,7 @@ else
     # Create data_sources collection
     echo "Creating data_sources collection..."
     curl -s -X POST http://localhost:8055/collections \
-        -H "Authorization: Bearer $ADMIN_TOKEN" \
+        -H "Authorization: Bearer $SYSTEM_TOKEN" \
         -H "Content-Type: application/json" \
         -d '{
             "collection": "data_sources",
@@ -218,7 +225,7 @@ else
     # Create data_quality_scores collection
     echo "Creating data_quality_scores collection..."
     curl -s -X POST http://localhost:8055/collections \
-        -H "Authorization: Bearer $ADMIN_TOKEN" \
+        -H "Authorization: Bearer $SYSTEM_TOKEN" \
         -H "Content-Type: application/json" \
         -d '{
             "collection": "data_quality_scores",
