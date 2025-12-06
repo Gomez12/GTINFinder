@@ -61,20 +61,32 @@ npm run dev
 
 #### Directus Admin Account
 1. Ga naar http://localhost:8055
-2. Maak een admin account aan
-3. Log in en configureer de collections
+2. Login met:
+   - Email: `admin@example.com`
+   - Password: `admin123`
+3. Configureer de collections
 
 #### Airflow Admin Account
 1. Ga naar http://localhost:8080
 2. Login met:
    - Username: `airflow_user`
-   - Password: uit je `.env` file
+   - Password: `airflow_secure_password`
 
 #### Authentik Setup
 1. Ga naar http://localhost:9000
-2. Volg de setup wizard
-3. Maak een admin account aan
-4. Configureer OIDC provider voor GTINFinder
+2. Login met:
+   - Username: `akadmin`
+   - Password: `admin123`
+3. Configureer OIDC provider voor GTINFinder
+
+### 📋 Default Credentials
+
+| Service | URL | Username | Password |
+|---------|-----|----------|----------|
+| Directus | http://localhost:8055 | admin@example.com | admin123 |
+| Airflow | http://localhost:8080 | airflow_user | airflow_secure_password |
+| Authentik | http://localhost:9000 | akadmin | admin123 |
+| PostgreSQL | localhost:5432 | postgres | (from .env) |
 
 ## 📋 Environment Variables
 

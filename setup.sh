@@ -76,3 +76,48 @@ AUTHENTIK_PASSWORD=authentik_secure_password
 # Frontend Configuration (for later)
 REACT_APP_AUTH0_DOMAIN=localhost:9000
 REACT_APP_AUTH0_CLIENT_ID=your_client_id_here
+REACT_APP_API_URL=http://localhost:8055
+EOF
+
+echo "✅ .env file created"
+
+echo "🚀 Starting services for initial setup..."
+docker-compose up -d postgresql directus authentik-server
+
+echo "⏳ Waiting for services to be ready..."
+sleep 30
+
+echo "🔧 Setting up Directus admin user..."
+# Wait for Directus to be ready and create/reset admin user
+docker-compose exec -T directus npx directus users passwd --email admin@example.com --password admin123 || \
+docker-compose exec -T directus npx directus users create --email admin@example.com --password admin123 --role administrator
+
+echo "🔧 Setting up Authentik admin password..."
+# Wait for Authentik to be ready and reset admin password
+docker-compose exec -T authentik-server python manage.py shell -c "
+from authentik.core.models import User; 
+u = User.objects.get(username='akadmin'); 
+u.set_password('admin123'); 
+u.save(); 
+print('Password updated for akadmin')
+" || echo "Authentik setup will be completed manually"
+
+echo "🛑 Stopping services..."
+docker-compose down
+
+echo "✅ Setup completed successfully!"
+echo ""
+echo "📋 Login Credentials:"
+echo "Directus (http://localhost:8055):"
+echo "  Email: admin@example.com"
+echo "  Password: admin123"
+echo ""
+echo "Airflow (http://localhost:8080):"
+echo "  Username: airflow_user"
+echo "  Password: airflow_secure_password"
+echo ""
+echo "Authentik (http://localhost:9000):"
+echo "  Username: akadmin"
+echo "  Password: admin123"
+echo ""
+echo "🚀 Run 'make up' to start all services!"

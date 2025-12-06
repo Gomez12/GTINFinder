@@ -117,11 +117,10 @@ docker-compose exec postgresql psql -U directus_user -d directus -c "\dt"
 
 #### 3.1 Admin Interface Testen
 1. **Ga naar:** http://localhost:8055
-2. **Maak admin account aan:**
+2. **Login met bestaande credentials:**
    - Email: admin@example.com
    - Password: admin123
-3. **Login** met deze credentials
-4. **Verwacht:** Directus admin dashboard
+3. **Verwacht:** Directus admin dashboard
 
 #### 3.2 Collections Aanmaken
 1. **Ga naar Settings > Data Model**
@@ -166,9 +165,10 @@ curl http://localhost:8055/items/gtins
 
 #### 5.1 Admin Interface Testen
 1. **Ga naar:** http://localhost:9000
-2. **Setup wizard doorlopen**
-3. **Maak admin account aan**
-4. **Verwacht:** Authentik admin dashboard
+2. **Login met bestaande credentials:**
+   - Username: akadmin
+   - Password: admin123
+3. **Verwacht:** Authentik admin dashboard
 
 #### 5.2 OIDC Provider Configureren
 1. **Ga naar Applications > Providers**
