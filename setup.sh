@@ -96,28 +96,42 @@ docker-compose exec -T directus npx directus users create --email admin@example.
 echo "🔐 Setting up admin permissions..."
 sleep 5
 
-# Get admin user ID and ensure they have admin role
-ADMIN_USER_ID=$(docker-compose exec -T directus npx directus users list --filter 'email=admin@example.com' --fields id 2>/dev/null | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4 || echo "")
-
-if [ -n "$ADMIN_USER_ID" ]; then
-    echo "Found admin user ID: $ADMIN_USER_ID"
-    # Try to update user role to administrator
-    docker-compose exec -T directus npx directus users update --id "$ADMIN_USER_ID" --data '{"role":"administrator"}' 2>/dev/null || echo "⚠️  Could not update user role"
-else
-    echo "⚠️  Could not find admin user ID"
-fi
+# Skip admin user ID check for now - focus on system token approach
+echo "⚡ Using system token approach for collection creation"
 
 echo "📋 Creating Directus collections..."
 # Wait a bit more for Directus to be fully ready
 sleep 10
 
-# Get system token for API calls (required for collection creation)
-echo "Getting Directus system token..."
-SYSTEM_TOKEN=$(grep DIRECTUS_SECRET .env | cut -d'=' -f2)
+# Get admin token for API calls (try different approaches)
+echo "Getting Directus admin token..."
 
-if [ -z "$SYSTEM_TOKEN" ]; then
-    echo "⚠️  Could not find DIRECTUS_SECRET in .env file"
-    echo "⚠️  Collections will need to be created manually."
+# Method 1: Try to get admin token via login
+ADMIN_TOKEN=$(curl -s -X POST http://localhost:8055/auth/login \
+    -H "Content-Type: application/json" \
+    -d '{"email":"admin@example.com","password":"admin123"}' | \
+    grep -o '"access_token":"[^"]*"' | cut -d'"' -f4 || echo "")
+
+if [ -n "$ADMIN_TOKEN" ]; then
+    echo "✅ Got admin token via login"
+    TOKEN_TYPE="admin"
+    TOKEN="$ADMIN_TOKEN"
+else
+    # Method 2: Try system token
+    SYSTEM_TOKEN=$(grep DIRECTUS_SECRET .env | cut -d'=' -f2)
+    if [ -n "$SYSTEM_TOKEN" ]; then
+        echo "✅ Trying system token"
+        TOKEN_TYPE="system"
+        TOKEN="$SYSTEM_TOKEN"
+    else
+        echo "⚠️  Could not get any valid token"
+        TOKEN_TYPE="none"
+        TOKEN=""
+    fi
+fi
+
+if [ -z "$TOKEN" ]; then
+    echo "⚠️  Failed to authenticate with Directus. Collections will need to be created manually."
     echo "Please go to http://localhost:8055 and create the following collections:"
     echo "- gtins"
     echo "- gtin_raw_data" 
@@ -125,12 +139,12 @@ if [ -z "$SYSTEM_TOKEN" ]; then
     echo "- data_sources"
     echo "- data_quality_scores"
 else
-    echo "✅ Got system token, creating collections via API..."
+    echo "✅ Got $TOKEN_TYPE token, creating collections via API..."
     
     # Create gtins collection
     echo "Creating gtins collection..."
-    curl -s -X POST http://localhost:8055/collections \
-        -H "Authorization: Bearer $SYSTEM_TOKEN" \
+    RESPONSE=$(curl -s -X POST http://localhost:8055/collections \
+        -H "Authorization: Bearer $TOKEN" \
         -H "Content-Type: application/json" \
         -d '{
             "collection": "gtins",
@@ -150,12 +164,17 @@ else
                 "created_at": {"type": "timestamp", "default_value": "$NOW"},
                 "updated_at": {"type": "timestamp"}
             }
-        }' || echo "⚠️  Failed to create gtins collection"
+        }')
+    if [[ "$RESPONSE" == *"errors"* ]]; then
+        echo "⚠️  Failed to create gtins collection: $RESPONSE"
+    else
+        echo "✅ Created gtins collection"
+    fi
 
     # Create gtin_raw_data collection
     echo "Creating gtin_raw_data collection..."
-    curl -s -X POST http://localhost:8055/collections \
-        -H "Authorization: Bearer $SYSTEM_TOKEN" \
+    RESPONSE=$(curl -s -X POST http://localhost:8055/collections \
+        -H "Authorization: Bearer $TOKEN" \
         -H "Content-Type: application/json" \
         -d '{
             "collection": "gtin_raw_data",
@@ -171,12 +190,17 @@ else
                 "raw_data": {"type": "json"},
                 "received_at": {"type": "timestamp", "default_value": "$NOW"}
             }
-        }' || echo "⚠️  Failed to create gtin_raw_data collection"
+        }')
+    if [[ "$RESPONSE" == *"errors"* ]]; then
+        echo "⚠️  Failed to create gtin_raw_data collection: $RESPONSE"
+    else
+        echo "✅ Created gtin_raw_data collection"
+    fi
 
     # Create gtin_golden_records collection
     echo "Creating gtin_golden_records collection..."
-    curl -s -X POST http://localhost:8055/collections \
-        -H "Authorization: Bearer $SYSTEM_TOKEN" \
+    RESPONSE=$(curl -s -X POST http://localhost:8055/collections \
+        -H "Authorization: Bearer $TOKEN" \
         -H "Content-Type: application/json" \
         -d '{
             "collection": "gtin_golden_records",
@@ -197,12 +221,17 @@ else
                 "created_at": {"type": "timestamp", "default_value": "$NOW"},
                 "updated_at": {"type": "timestamp"}
             }
-        }' || echo "⚠️  Failed to create gtin_golden_records collection"
+        }')
+    if [[ "$RESPONSE" == *"errors"* ]]; then
+        echo "⚠️  Failed to create gtin_golden_records collection: $RESPONSE"
+    else
+        echo "✅ Created gtin_golden_records collection"
+    fi
 
     # Create data_sources collection
     echo "Creating data_sources collection..."
-    curl -s -X POST http://localhost:8055/collections \
-        -H "Authorization: Bearer $SYSTEM_TOKEN" \
+    RESPONSE=$(curl -s -X POST http://localhost:8055/collections \
+        -H "Authorization: Bearer $TOKEN" \
         -H "Content-Type: application/json" \
         -d '{
             "collection": "data_sources",
@@ -220,12 +249,17 @@ else
                 "is_active": {"type": "boolean", "default_value": true},
                 "created_at": {"type": "timestamp", "default_value": "$NOW"}
             }
-        }' || echo "⚠️  Failed to create data_sources collection"
+        }')
+    if [[ "$RESPONSE" == *"errors"* ]]; then
+        echo "⚠️  Failed to create data_sources collection: $RESPONSE"
+    else
+        echo "✅ Created data_sources collection"
+    fi
 
     # Create data_quality_scores collection
     echo "Creating data_quality_scores collection..."
-    curl -s -X POST http://localhost:8055/collections \
-        -H "Authorization: Bearer $SYSTEM_TOKEN" \
+    RESPONSE=$(curl -s -X POST http://localhost:8055/collections \
+        -H "Authorization: Bearer $TOKEN" \
         -H "Content-Type: application/json" \
         -d '{
             "collection": "data_quality_scores",
@@ -244,7 +278,12 @@ else
                 "overall_score": {"type": "float", "default_value": 0.0},
                 "evaluated_at": {"type": "timestamp", "default_value": "$NOW"}
             }
-        }' || echo "⚠️  Failed to create data_quality_scores collection"
+        }')
+    if [[ "$RESPONSE" == *"errors"* ]]; then
+        echo "⚠️  Failed to create data_quality_scores collection: $RESPONSE"
+    else
+        echo "✅ Created data_quality_scores collection"
+    fi
 
     echo "✅ Collections creation completed via API"
 fi
