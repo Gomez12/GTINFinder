@@ -87,95 +87,38 @@ docker-compose up -d postgresql directus authentik-server
 echo "⏳ Waiting for services to be ready..."
 sleep 30
 
-echo "🔧 Setting up Directus admin user..."
-# Wait longer for Directus to be fully ready
-echo "Waiting for Directus to complete initialization..."
-sleep 30
+echo "🔧 Directus admin user will be created automatically via environment variables"
+echo "⏳ Waiting for Directus to complete initialization and create admin user..."
 
-# Check if Directus is responding
-echo "Checking Directus health..."
-for i in {1..10}; do
+# Wait for Directus to be fully ready and admin user to be created
+for i in {1..12}; do
     if curl -s http://localhost:8055/server/info > /dev/null 2>&1; then
-        echo "✅ Directus is responding"
-        break
-    fi
-    if [ $i -eq 10 ]; then
-        echo "⚠️ Directus not responding after 10 attempts"
-        echo "📋 Manual admin user creation required:"
-        echo "1. Go to http://localhost:8055"
-        echo "2. Complete initial setup if prompted"
-        echo "3. Create admin user with email: admin@example.com"
-        echo "4. Set password: admin123"
-        exit 1
-    fi
-    echo "Attempt $i/10 - waiting 10 seconds..."
-    sleep 10
-done
-
-# Try to create admin user using API approach
-echo "Creating Directus admin user via API..."
-
-# First, try to login to see if admin already exists
-LOGIN_RESPONSE=$(curl -s -X POST http://localhost:8055/auth/login \
-    -H "Content-Type: application/json" \
-    -d '{"email":"admin@example.com","password":"admin123"}')
-
-if echo "$LOGIN_RESPONSE" | grep -q "access_token"; then
-    echo "✅ Admin user already exists and is accessible"
-else
-    echo "Admin user not found, creating via API..."
-    
-    # Get system token for admin operations
-    SYSTEM_TOKEN=$(grep DIRECTUS_SECRET .env | cut -d'=' -f2)
-    
-    if [ -n "$SYSTEM_TOKEN" ]; then
-        # Create admin user using system token
-        CREATE_RESPONSE=$(curl -s -X POST http://localhost:8055/users \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $SYSTEM_TOKEN" \
-            -d '{
-                "email": "admin@example.com",
-                "password": "admin123",
-                "role": "administrator",
-                "first_name": "Admin",
-                "last_name": "User",
-                "status": "active"
-            }')
+        echo "✅ Directus is responding, checking admin user..."
         
-        if echo "$CREATE_RESPONSE" | grep -q "id\|email"; then
-            echo "✅ Admin user created successfully via API"
-        else
-            echo "⚠️  API creation failed, trying CLI method..."
-            
-            # Fallback to CLI method
-            docker-compose exec -T directus npx directus users create \
-                --email admin@example.com \
-                --password admin123 \
-                --role administrator \
-                --first-name Admin \
-                --last-name User 2>/dev/null
-            CLI_RESULT=$?
-            
-            if [ $CLI_RESULT -eq 0 ]; then
-                echo "✅ Admin user created successfully via CLI"
-            else
-                echo "⚠️  All admin user creation methods failed"
-                echo "📋 Manual admin user creation required:"
-                echo "1. Go to http://localhost:8055"
-                echo "2. Complete initial setup if prompted"
-                echo "3. Create admin user with email: admin@example.com"
-                echo "4. Set password: admin123"
-            fi
+        # Test if admin user can login
+        LOGIN_RESPONSE=$(curl -s -X POST http://localhost:8055/auth/login \
+            -H "Content-Type: application/json" \
+            -d '{"email":"admin@example.com","password":"admin123"}')
+        
+        if echo "$LOGIN_RESPONSE" | grep -q "access_token"; then
+            echo "✅ Admin user created successfully and is accessible"
+            break
         fi
-    else
-        echo "⚠️  No system token found, manual setup required"
-        echo "📋 Manual admin user creation required:"
-        echo "1. Go to http://localhost:8055"
-        echo "2. Complete initial setup if prompted"
-        echo "3. Create admin user with email: admin@example.com"
-        echo "4. Set password: admin123"
     fi
-fi
+    
+    if [ $i -eq 12 ]; then
+        echo "⚠️ Directus admin user setup incomplete after 2 minutes"
+        echo "📋 Manual verification required:"
+        echo "1. Go to http://localhost:8055"
+        echo "2. Try to login with:"
+        echo "   Email: admin@example.com"
+        echo "   Password: admin123"
+        echo "3. If login fails, complete the initial setup wizard"
+    else
+        echo "Attempt $i/12 - waiting 10 seconds..."
+        sleep 10
+    fi
+done
 
 # Ensure admin user has proper permissions
 echo "🔐 Setting up admin permissions..."

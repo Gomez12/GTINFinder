@@ -35,6 +35,8 @@ services:
       PUBLIC_URL: 'http://localhost:8055'
       CORS_ORIGIN: 'http://localhost:3000'
       WEBSOCKETS_ENABLED: 'true'
+      ADMIN_EMAIL: 'admin@example.com'
+      ADMIN_PASSWORD: 'admin123'
     ports:
       - "8055:8055"
     networks:
