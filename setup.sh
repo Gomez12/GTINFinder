@@ -96,107 +96,151 @@ echo "📋 Creating Directus collections..."
 # Wait a bit more for Directus to be fully ready
 sleep 10
 
-# Create collections via API calls
-echo "Creating gtins collection..."
-docker-compose exec -T directus npx directus schema create --collection gtins --data '{
-  "collection": "gtins",
-  "meta": {
-    "collection": "gtins",
-    "icon": "barcode",
-    "note": "Main GTIN records with validated data",
-    "display_template": "{{gtin}} - {{product_name}}"
-  },
-  "schema": {
-    "gtin": {"type": "string", "length": 14, "unique": true, "required": true},
-    "product_name": {"type": "string", "length": 255},
-    "brand": {"type": "string", "length": 100},
-    "category": {"type": "string", "length": 100},
-    "description": {"type": "text"},
-    "status": {"type": "string", "options": ["pending", "validated", "error"], "default_value": "pending"},
-    "created_at": {"type": "timestamp", "default_value": "$NOW"},
-    "updated_at": {"type": "timestamp"}
-  }
-}' || echo "⚠️  Failed to create gtins collection"
+# Get admin token for API calls
+echo "Getting Directus admin token..."
+ADMIN_TOKEN=$(docker-compose exec -T directus npx directus utils get-token --email admin@example.com --password admin123 2>/dev/null || echo "")
 
-echo "Creating gtin_raw_data collection..."
-docker-compose exec -T directus npx directus schema create --collection gtin_raw_data --data '{
-  "collection": "gtin_raw_data",
-  "meta": {
-    "collection": "gtin_raw_data",
-    "icon": "data",
-    "note": "Raw data from external APIs"
-  },
-  "schema": {
-    "id": {"type": "integer", "primary_key": true, "auto_increment": true},
-    "gtin": {"type": "string", "length": 14},
-    "source": {"type": "string", "length": 50},
-    "raw_data": {"type": "json"},
-    "received_at": {"type": "timestamp", "default_value": "$NOW"}
-  }
-}' || echo "⚠️  Failed to create gtin_raw_data collection"
+if [ -z "$ADMIN_TOKEN" ]; then
+    echo "⚠️  Could not get admin token, trying alternative method..."
+    # Try to get token via curl
+    ADMIN_TOKEN=$(curl -s -X POST http://localhost:8055/auth/login \
+        -H "Content-Type: application/json" \
+        -d '{"email":"admin@example.com","password":"admin123"}' | \
+        grep -o '"access_token":"[^"]*"' | cut -d'"' -f4 || echo "")
+fi
 
-echo "Creating gtin_golden_records collection..."
-docker-compose exec -T directus npx directus schema create --collection gtin_golden_records --data '{
-  "collection": "gtin_golden_records",
-  "meta": {
-    "collection": "gtin_golden_records",
-    "icon": "star",
-    "note": "Consolidated golden records"
-  },
-  "schema": {
-    "id": {"type": "integer", "primary_key": true, "auto_increment": true},
-    "gtin": {"type": "string", "length": 14, "unique": true},
-    "product_name": {"type": "string", "length": 255},
-    "brand": {"type": "string", "length": 100},
-    "category": {"type": "string", "length": 100},
-    "description": {"type": "text"},
-    "confidence_score": {"type": "float", "default_value": 0.0},
-    "sources_count": {"type": "integer", "default_value": 0},
-    "created_at": {"type": "timestamp", "default_value": "$NOW"},
-    "updated_at": {"type": "timestamp"}
-  }
-}' || echo "⚠️  Failed to create gtin_golden_records collection"
+if [ -z "$ADMIN_TOKEN" ]; then
+    echo "⚠️  Failed to authenticate with Directus. Collections will need to be created manually."
+    echo "Please go to http://localhost:8055 and create the following collections:"
+    echo "- gtins"
+    echo "- gtin_raw_data" 
+    echo "- gtin_golden_records"
+    echo "- data_sources"
+    echo "- data_quality_scores"
+else
+    echo "✅ Got admin token, creating collections via API..."
+    
+    # Create gtins collection
+    echo "Creating gtins collection..."
+    curl -s -X POST http://localhost:8055/collections \
+        -H "Authorization: Bearer $ADMIN_TOKEN" \
+        -H "Content-Type: application/json" \
+        -d '{
+            "collection": "gtins",
+            "meta": {
+                "collection": "gtins",
+                "icon": "barcode",
+                "note": "Main GTIN records with validated data",
+                "display_template": "{{gtin}} - {{product_name}}"
+            },
+            "schema": {
+                "gtin": {"type": "string", "length": 14, "unique": true, "required": true},
+                "product_name": {"type": "string", "length": 255},
+                "brand": {"type": "string", "length": 100},
+                "category": {"type": "string", "length": 100},
+                "description": {"type": "text"},
+                "status": {"type": "string", "options": ["pending", "validated", "error"], "default_value": "pending"},
+                "created_at": {"type": "timestamp", "default_value": "$NOW"},
+                "updated_at": {"type": "timestamp"}
+            }
+        }' || echo "⚠️  Failed to create gtins collection"
 
-echo "Creating data_sources collection..."
-docker-compose exec -T directus npx directus schema create --collection data_sources --data '{
-  "collection": "data_sources",
-  "meta": {
-    "collection": "data_sources",
-    "icon": "source",
-    "note": "Available data sources"
-  },
-  "schema": {
-    "id": {"type": "integer", "primary_key": true, "auto_increment": true},
-    "name": {"type": "string", "length": 100, "unique": true, "required": true},
-    "api_endpoint": {"type": "string", "length": 255},
-    "api_key_required": {"type": "boolean", "default_value": false},
-    "rate_limit": {"type": "integer", "default_value": 100},
-    "is_active": {"type": "boolean", "default_value": true},
-    "created_at": {"type": "timestamp", "default_value": "$NOW"}
-  }
-}' || echo "⚠️  Failed to create data_sources collection"
+    # Create gtin_raw_data collection
+    echo "Creating gtin_raw_data collection..."
+    curl -s -X POST http://localhost:8055/collections \
+        -H "Authorization: Bearer $ADMIN_TOKEN" \
+        -H "Content-Type: application/json" \
+        -d '{
+            "collection": "gtin_raw_data",
+            "meta": {
+                "collection": "gtin_raw_data",
+                "icon": "data",
+                "note": "Raw data from external APIs"
+            },
+            "schema": {
+                "id": {"type": "integer", "primary_key": true, "auto_increment": true},
+                "gtin": {"type": "string", "length": 14},
+                "source": {"type": "string", "length": 50},
+                "raw_data": {"type": "json"},
+                "received_at": {"type": "timestamp", "default_value": "$NOW"}
+            }
+        }' || echo "⚠️  Failed to create gtin_raw_data collection"
 
-echo "Creating data_quality_scores collection..."
-docker-compose exec -T directus npx directus schema create --collection data_quality_scores --data '{
-  "collection": "data_quality_scores",
-  "meta": {
-    "collection": "data_quality_scores",
-    "icon": "analytics",
-    "note": "Data quality metrics"
-  },
-  "schema": {
-    "id": {"type": "integer", "primary_key": true, "auto_increment": true},
-    "gtin": {"type": "string", "length": 14},
-    "source": {"type": "string", "length": 50},
-    "completeness_score": {"type": "float", "default_value": 0.0},
-    "accuracy_score": {"type": "float", "default_value": 0.0},
-    "consistency_score": {"type": "float", "default_value": 0.0},
-    "overall_score": {"type": "float", "default_value": 0.0},
-    "evaluated_at": {"type": "timestamp", "default_value": "$NOW"}
-  }
-}' || echo "⚠️  Failed to create data_quality_scores collection"
+    # Create gtin_golden_records collection
+    echo "Creating gtin_golden_records collection..."
+    curl -s -X POST http://localhost:8055/collections \
+        -H "Authorization: Bearer $ADMIN_TOKEN" \
+        -H "Content-Type: application/json" \
+        -d '{
+            "collection": "gtin_golden_records",
+            "meta": {
+                "collection": "gtin_golden_records",
+                "icon": "star",
+                "note": "Consolidated golden records"
+            },
+            "schema": {
+                "id": {"type": "integer", "primary_key": true, "auto_increment": true},
+                "gtin": {"type": "string", "length": 14, "unique": true},
+                "product_name": {"type": "string", "length": 255},
+                "brand": {"type": "string", "length": 100},
+                "category": {"type": "string", "length": 100},
+                "description": {"type": "text"},
+                "confidence_score": {"type": "float", "default_value": 0.0},
+                "sources_count": {"type": "integer", "default_value": 0},
+                "created_at": {"type": "timestamp", "default_value": "$NOW"},
+                "updated_at": {"type": "timestamp"}
+            }
+        }' || echo "⚠️  Failed to create gtin_golden_records collection"
 
-echo "✅ Collections creation completed"
+    # Create data_sources collection
+    echo "Creating data_sources collection..."
+    curl -s -X POST http://localhost:8055/collections \
+        -H "Authorization: Bearer $ADMIN_TOKEN" \
+        -H "Content-Type: application/json" \
+        -d '{
+            "collection": "data_sources",
+            "meta": {
+                "collection": "data_sources",
+                "icon": "source",
+                "note": "Available data sources"
+            },
+            "schema": {
+                "id": {"type": "integer", "primary_key": true, "auto_increment": true},
+                "name": {"type": "string", "length": 100, "unique": true, "required": true},
+                "api_endpoint": {"type": "string", "length": 255},
+                "api_key_required": {"type": "boolean", "default_value": false},
+                "rate_limit": {"type": "integer", "default_value": 100},
+                "is_active": {"type": "boolean", "default_value": true},
+                "created_at": {"type": "timestamp", "default_value": "$NOW"}
+            }
+        }' || echo "⚠️  Failed to create data_sources collection"
+
+    # Create data_quality_scores collection
+    echo "Creating data_quality_scores collection..."
+    curl -s -X POST http://localhost:8055/collections \
+        -H "Authorization: Bearer $ADMIN_TOKEN" \
+        -H "Content-Type: application/json" \
+        -d '{
+            "collection": "data_quality_scores",
+            "meta": {
+                "collection": "data_quality_scores",
+                "icon": "analytics",
+                "note": "Data quality metrics"
+            },
+            "schema": {
+                "id": {"type": "integer", "primary_key": true, "auto_increment": true},
+                "gtin": {"type": "string", "length": 14},
+                "source": {"type": "string", "length": 50},
+                "completeness_score": {"type": "float", "default_value": 0.0},
+                "accuracy_score": {"type": "float", "default_value": 0.0},
+                "consistency_score": {"type": "float", "default_value": 0.0},
+                "overall_score": {"type": "float", "default_value": 0.0},
+                "evaluated_at": {"type": "timestamp", "default_value": "$NOW"}
+            }
+        }' || echo "⚠️  Failed to create data_quality_scores collection"
+
+    echo "✅ Collections creation completed via API"
+fi
 
 echo "🔧 Setting up Authentik admin password..."
 # Wait for Authentik to be ready and reset admin password
