@@ -112,29 +112,63 @@ for i in {1..10}; do
     sleep 10
 done
 
-# Try to create admin user using Directus CLI with proper syntax
-echo "Creating Directus admin user..."
-docker-compose exec -T directus npx directus bootstrap --email admin@example.com --password admin123 2>/dev/null
-BOOTSTRAP_RESULT=$?
+# Try to create admin user using API approach
+echo "Creating Directus admin user via API..."
 
-if [ $BOOTSTRAP_RESULT -eq 0 ]; then
-    echo "✅ Admin user created successfully via bootstrap"
+# First, try to login to see if admin already exists
+LOGIN_RESPONSE=$(curl -s -X POST http://localhost:8055/auth/login \
+    -H "Content-Type: application/json" \
+    -d '{"email":"admin@example.com","password":"admin123"}')
+
+if echo "$LOGIN_RESPONSE" | grep -q "access_token"; then
+    echo "✅ Admin user already exists and is accessible"
 else
-    echo "Bootstrap failed, trying alternative method..."
+    echo "Admin user not found, creating via API..."
     
-    # Try using the users create command with proper JSON format
-    docker-compose exec -T directus npx directus users create \
-        --email admin@example.com \
-        --password admin123 \
-        --role administrator \
-        --first-name Admin \
-        --last-name User 2>/dev/null
-    CREATE_RESULT=$?
+    # Get system token for admin operations
+    SYSTEM_TOKEN=$(grep DIRECTUS_SECRET .env | cut -d'=' -f2)
     
-    if [ $CREATE_RESULT -eq 0 ]; then
-        echo "✅ Admin user created successfully via users create"
+    if [ -n "$SYSTEM_TOKEN" ]; then
+        # Create admin user using system token
+        CREATE_RESPONSE=$(curl -s -X POST http://localhost:8055/users \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $SYSTEM_TOKEN" \
+            -d '{
+                "email": "admin@example.com",
+                "password": "admin123",
+                "role": "administrator",
+                "first_name": "Admin",
+                "last_name": "User",
+                "status": "active"
+            }')
+        
+        if echo "$CREATE_RESPONSE" | grep -q "id\|email"; then
+            echo "✅ Admin user created successfully via API"
+        else
+            echo "⚠️  API creation failed, trying CLI method..."
+            
+            # Fallback to CLI method
+            docker-compose exec -T directus npx directus users create \
+                --email admin@example.com \
+                --password admin123 \
+                --role administrator \
+                --first-name Admin \
+                --last-name User 2>/dev/null
+            CLI_RESULT=$?
+            
+            if [ $CLI_RESULT -eq 0 ]; then
+                echo "✅ Admin user created successfully via CLI"
+            else
+                echo "⚠️  All admin user creation methods failed"
+                echo "📋 Manual admin user creation required:"
+                echo "1. Go to http://localhost:8055"
+                echo "2. Complete initial setup if prompted"
+                echo "3. Create admin user with email: admin@example.com"
+                echo "4. Set password: admin123"
+            fi
+        fi
     else
-        echo "⚠️  Admin user creation failed"
+        echo "⚠️  No system token found, manual setup required"
         echo "📋 Manual admin user creation required:"
         echo "1. Go to http://localhost:8055"
         echo "2. Complete initial setup if prompted"
