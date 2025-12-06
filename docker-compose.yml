@@ -67,7 +67,7 @@ services:
       AIRFLOW__CELERY__BROKER_URL: 'redis://redis:6379/0'
       AIRFLOW__CELERY__RESULT_BACKEND: 'redis://redis:6379/0'
       AIRFLOW__CORE__ENABLE_XCOM_PICKLING: 'true'
-      _AIRFLOW_DB_UPGRADE: 'true'
+      _AIRFLOW_DB_MIGRATE: 'true'
       _AIRFLOW_WWW_USER_CREATE: 'true'
       _AIRFLOW_WWW_USER_USERNAME: ${AIRFLOW_USER}
       _AIRFLOW_WWW_USER_PASSWORD: ${AIRFLOW_PASSWORD}
@@ -85,11 +85,11 @@ services:
       - airflow_logs:/opt/airflow/logs
     command: >
       bash -c "
-        airflow db upgrade &&
+        airflow db migrate &&
         airflow users create -r Admin -u ${AIRFLOW_USER} -e admin@example.com -f Admin -l User -p ${AIRFLOW_PASSWORD} ||
         true &&
         airflow scheduler &
-        exec airflow webserver
+        exec airflow api-server
       "
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
