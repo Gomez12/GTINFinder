@@ -283,7 +283,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 "field": "created_at",
                 "type": "dateTime",
                 "schema": {
-                    "is_nullable": false,
+                    "is_nullable": false
                 },
                 "meta": {
                     "collection": "gtins",
@@ -390,7 +390,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 "field": "received_at",
                 "type": "dateTime",
                 "schema": {
-                    "is_nullable": false,
+                    "is_nullable": false
                 },
                 "meta": {
                     "collection": "gtin_raw_data",
@@ -542,7 +542,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 "field": "created_at",
                 "type": "dateTime",
                 "schema": {
-                    "is_nullable": false,
+                    "is_nullable": false
                 },
                 "meta": {
                     "collection": "gtin_golden_records",
@@ -681,7 +681,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 "field": "created_at",
                 "type": "dateTime",
                 "schema": {
-                    "is_nullable": false,
+                    "is_nullable": false
                 },
                 "meta": {
                     "collection": "data_sources",
@@ -818,7 +818,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 "field": "evaluated_at",
                 "type": "dateTime",
                 "schema": {
-                    "is_nullable": false,
+                    "is_nullable": false
                 },
                 "meta": {
                     "collection": "data_quality_scores",
