@@ -86,9 +86,8 @@ services:
       - ./airflow/airflow.cfg:/opt/airflow/airflow.cfg:ro
     command: >
       bash -c "
-        airflow db migrate &&
-        airflow users create --role Admin --username ${AIRFLOW_USER} --email admin@example.com --firstname Admin --lastname User --password ${AIRFLOW_PASSWORD} ||
-        true
+        airflow scheduler &
+        exec airflow api-server
       "
 
   airflow:
