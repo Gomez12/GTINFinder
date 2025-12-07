@@ -851,13 +851,24 @@ else
 fi
 
 echo "🔧 Setting up Authentik admin password..."
-# Wait for Authentik to be ready and reset admin password
+# Wait for Authentik to be ready and create/update admin password
 docker-compose exec -T authentik-server python manage.py shell -c "
 from authentik.core.models import User;
-u = User.objects.get(username='akadmin');
-u.set_password('admin123');
-u.save();
-print('Password updated for akadmin')
+try:
+    u = User.objects.get(username='akadmin');
+    u.set_password('admin123');
+    u.save();
+    print('Password updated for akadmin')
+except User.DoesNotExist:
+    from django.contrib.auth import get_user_model;
+    User = get_user_model();
+    u = User.objects.create_superuser(
+        username='akadmin',
+        email='admin@example.com',
+        password='admin123',
+        name='Admin User'
+    );
+    print('Created akadmin user with password admin123')
 " || echo "Authentik setup will be completed manually"
 
 echo "🛑 Stopping services..."
