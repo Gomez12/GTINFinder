@@ -284,9 +284,6 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 "type": "dateTime",
                 "schema": {
                     "is_nullable": false,
-                    "default_value": {
-                        "function": "now()"
-                    }
                 },
                 "meta": {
                     "collection": "gtins",
@@ -394,9 +391,6 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 "type": "dateTime",
                 "schema": {
                     "is_nullable": false,
-                    "default_value": {
-                        "function": "now()"
-                    }
                 },
                 "meta": {
                     "collection": "gtin_raw_data",
@@ -549,9 +543,6 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 "type": "dateTime",
                 "schema": {
                     "is_nullable": false,
-                    "default_value": {
-                        "function": "now()"
-                    }
                 },
                 "meta": {
                     "collection": "gtin_golden_records",
@@ -691,9 +682,6 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 "type": "dateTime",
                 "schema": {
                     "is_nullable": false,
-                    "default_value": {
-                        "function": "now()"
-                    }
                 },
                 "meta": {
                     "collection": "data_sources",
@@ -831,9 +819,6 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 "type": "dateTime",
                 "schema": {
                     "is_nullable": false,
-                    "default_value": {
-                        "function": "now()"
-                    }
                 },
                 "meta": {
                     "collection": "data_quality_scores",
