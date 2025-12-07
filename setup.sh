@@ -82,7 +82,7 @@ EOF
 echo "✅ .env file created"
 
 echo "🚀 Starting services for initial setup..."
-docker-compose up -d postgresql redis directus authentik-server authentik-worker
+docker-compose up -d postgresql redis directus airflow authentik-server authentik-worker
 
 echo "⏳ Waiting for services to be ready..."
 sleep 30
