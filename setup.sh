@@ -285,7 +285,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 "schema": {
                     "is_nullable": false,
                     "default_value": {
-                        "function": "now"
+                        "function": "now()"
                     }
                 },
                 "meta": {
@@ -395,7 +395,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 "schema": {
                     "is_nullable": false,
                     "default_value": {
-                        "function": "now"
+                        "function": "now()"
                     }
                 },
                 "meta": {
@@ -550,7 +550,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 "schema": {
                     "is_nullable": false,
                     "default_value": {
-                        "function": "now"
+                        "function": "now()"
                     }
                 },
                 "meta": {
@@ -692,7 +692,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 "schema": {
                     "is_nullable": false,
                     "default_value": {
-                        "function": "now"
+                        "function": "now()"
                     }
                 },
                 "meta": {
@@ -832,7 +832,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
                 "schema": {
                     "is_nullable": false,
                     "default_value": {
-                        "function": "now"
+                        "function": "now()"
                     }
                 },
                 "meta": {
