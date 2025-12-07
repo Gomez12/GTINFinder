@@ -54,22 +54,20 @@ services:
       retries: 3
       start_period: 60s
 
-  airflow:
+  airflow-init:
     image: apache/airflow:3.1.3
-    container_name: gtin-airflow
+    container_name: gtin-airflow-init
     environment:
+      AIRFLOW_HOME: '/opt/airflow'
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: 'postgresql+psycopg2://airflow_user:airflow_secure_password@postgresql:5432/airflow'
       AIRFLOW__CORE__EXECUTOR: 'LocalExecutor'
-      AIRFLOW__CORE__SQL_ALCHEMY_CONN: 'postgresql+psycopg2://airflow_user:airflow_secure_password@postgresql:5432/airflow'
       AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
       AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__WEBSERVER__RBAC: 'true'
-      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
       AIRFLOW__API__AUTH_BACKEND: 'airflow.api.auth.backend.basic_auth'
       AIRFLOW__CELERY__BROKER_URL: 'redis://redis:6379/0'
       AIRFLOW__CELERY__RESULT_BACKEND: 'redis://redis:6379/0'
-      AIRFLOW__CORE__ENABLE_XCOM_PICKLING: 'true'
-      _AIRFLOW_DB_MIGRATE: 'true'
       _AIRFLOW_WWW_USER_CREATE: 'true'
       _AIRFLOW_WWW_USER_USERNAME: ${AIRFLOW_USER}
       _AIRFLOW_WWW_USER_PASSWORD: ${AIRFLOW_PASSWORD}
@@ -77,8 +75,6 @@ services:
       _AIRFLOW_WWW_USER_FIRSTNAME: 'Admin'
       _AIRFLOW_WWW_USER_LASTNAME: 'User'
       _AIRFLOW_WWW_USER_ROLE: 'Admin'
-    ports:
-      - "8080:8080"
     networks:
       - gtin-finder-network
     depends_on:
@@ -87,13 +83,37 @@ services:
       postgresql:
         condition: service_healthy
     volumes:
-      - ./airflow/dags:/opt/airflow/dags
-      - airflow_logs:/opt/airflow/logs
+      - ./airflow/airflow.cfg:/opt/airflow/airflow.cfg:ro
     command: >
       bash -c "
         airflow db migrate &&
         airflow users create --role Admin --username ${AIRFLOW_USER} --email admin@example.com --firstname Admin --lastname User --password ${AIRFLOW_PASSWORD} ||
-        true &&
+        true
+      "
+
+  airflow:
+    image: apache/airflow:3.1.3
+    container_name: gtin-airflow
+    environment:
+      AIRFLOW_CONFIG: '/opt/airflow/airflow.cfg'
+      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
+    ports:
+      - "8080:8080"
+    networks:
+      - gtin-finder-network
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - airflow_logs:/opt/airflow/logs
+      - ./airflow/airflow.cfg:/opt/airflow/airflow.cfg:ro
+    command: >
+      bash -c "
         airflow scheduler &
         exec airflow api-server
       "
