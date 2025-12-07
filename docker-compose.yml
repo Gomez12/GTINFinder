@@ -75,6 +75,7 @@ services:
       _AIRFLOW_WWW_USER_FIRSTNAME: 'Admin'
       _AIRFLOW_WWW_USER_LASTNAME: 'User'
       _AIRFLOW_WWW_USER_ROLE: 'Admin'
+      AIRFLOW__CORE__ENABLE_XCOM_PICKLING: 'true'
     networks:
       - gtin-finder-network
     depends_on:
@@ -86,16 +87,33 @@ services:
       - ./airflow/airflow.cfg:/opt/airflow/airflow.cfg:ro
     command: >
       bash -c "
-        airflow scheduler &
-        exec airflow api-server
+        airflow db migrate &&
+        echo 'Creating Airflow user...' &&
+        airflow users create 
+          --username '${AIRFLOW_USER}' 
+          --firstname 'Admin' 
+          --lastname 'User' 
+          --role 'Admin' 
+          --email 'admin@example.com' 
+          --password '${AIRFLOW_PASSWORD}' || echo 'User already exists or creation failed' &&
+        echo 'Airflow initialization completed successfully'
       "
 
   airflow:
     image: apache/airflow:3.1.3
     container_name: gtin-airflow
     environment:
-      AIRFLOW_CONFIG: '/opt/airflow/airflow.cfg'
+      AIRFLOW_HOME: '/opt/airflow'
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: 'postgresql+psycopg2://airflow_user:airflow_secure_password@postgresql:5432/airflow'
+      AIRFLOW__CORE__EXECUTOR: 'LocalExecutor'
       AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__WEBSERVER__RBAC: 'true'
+      AIRFLOW__API__AUTH_BACKEND: 'airflow.api.auth.backend.basic_auth'
+      AIRFLOW__CELERY__BROKER_URL: 'redis://redis:6379/0'
+      AIRFLOW__CELERY__RESULT_BACKEND: 'redis://redis:6379/0'
+      AIRFLOW__CORE__ENABLE_XCOM_PICKLING: 'true'
     ports:
       - "8080:8080"
     networks:
