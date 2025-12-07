@@ -860,14 +860,16 @@ try:
     u.save();
     print('Password updated for akadmin')
 except User.DoesNotExist:
-    from django.contrib.auth import get_user_model;
-    User = get_user_model();
-    u = User.objects.create_superuser(
+    u = User.objects.create_user(
         username='akadmin',
         email='admin@example.com',
         password='admin123',
         name='Admin User'
     );
+    u.is_superuser = True;
+    u.is_staff = True;
+    u.is_active = True;
+    u.save();
     print('Created akadmin user with password admin123')
 " || echo "Authentik setup will be completed manually"
 
