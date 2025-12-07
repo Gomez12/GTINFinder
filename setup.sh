@@ -82,7 +82,7 @@ EOF
 echo "✅ .env file created"
 
 echo "🚀 Starting services for initial setup..."
-docker-compose up -d postgresql directus authentik-server
+docker-compose up -d postgresql redis directus authentik-server authentik-worker
 
 echo "⏳ Waiting for services to be ready..."
 sleep 30
@@ -851,27 +851,42 @@ else
 fi
 
 echo "🔧 Setting up Authentik admin password..."
-# Wait for Authentik to be ready and create/update admin password
-docker-compose exec -T authentik-server python manage.py shell -c "
+# Wait for Authentik to be ready
+echo "⏳ Waiting for Authentik to be ready..."
+for i in {1..12}; do
+    if curl -s http://localhost:9000/-/health/ready/ > /dev/null 2>&1; then
+        echo "✅ Authentik is ready, setting up admin user..."
+        # Wait for Authentik to be ready and create/update admin password
+        docker-compose exec -T authentik-server python manage.py shell -c "
 from authentik.core.models import User;
+from django.contrib.auth import get_user_model;
 try:
     u = User.objects.get(username='akadmin');
     u.set_password('admin123');
     u.save();
     print('Password updated for akadmin')
 except User.DoesNotExist:
-    u = User.objects.create_user(
+    u = User.objects.create_superuser(
         username='akadmin',
         email='admin@example.com',
         password='admin123',
         name='Admin User'
     );
-    u.is_superuser = True;
-    u.is_staff = True;
-    u.is_active = True;
-    u.save();
     print('Created akadmin user with password admin123')
-" || echo "Authentik setup will be completed manually"
+" && echo "✅ Authentik admin user setup completed" && break
+    fi
+    
+    if [ $i -eq 12 ]; then
+        echo "⚠️ Authentik setup will be completed manually"
+        echo "📋 Manual setup required:"
+        echo "1. Go to http://localhost:9000"
+        echo "2. Complete the initial setup wizard"
+        echo "3. Create admin user with username 'akadmin' and password 'admin123'"
+    else
+        echo "Attempt $i/12 - waiting 10 seconds..."
+        sleep 10
+    fi
+done
 
 echo "🛑 Stopping services..."
 docker-compose down
