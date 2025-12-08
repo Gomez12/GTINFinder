@@ -384,6 +384,40 @@ make health
 - Never hardcode credentials
 - Validate all inputs
 
+## 📚 Documentation Maintenance
+
+### Keeping Documentation Up-to-Date
+
+This repository contains several documentation files that must be maintained in sync with the actual implementation:
+
+#### Core Documentation Files
+- `docs/setup-guide.md` - Primary setup and configuration guide
+- `docs/v1.0-project-plan.md` - Architecture and technical specifications  
+- `docs/sprint-*/README.md` - Sprint progress and objectives
+- `docs/sprint-*/technical-tasks.md` - Detailed implementation tasks
+- `docs/sprint-*/test-guide.md` - Testing procedures and checklists
+- `docs/sprint-*/user-stories.md` - Feature requirements and acceptance criteria
+
+#### When to Update Documentation
+Update documentation when:
+- **New features are implemented** - Update relevant sprint docs
+- **Configuration changes** - Update setup guide and AGENTS.md
+- **Build processes change** - Update build commands in AGENTS.md
+- **New services added** - Update architecture docs
+- **Testing procedures evolve** - Update test guides
+- **Security practices updated** - Update security guidelines
+
+#### Documentation Update Process
+1. **Make changes** to relevant documentation files
+2. **Update version numbers** and dates
+3. **Commit changes** with descriptive messages
+4. **Verify consistency** across all documentation files
+
+#### Version Control Strategy
+- **Major changes**: Update version in project plan
+- **Minor updates**: Update "Last Updated" date in affected files
+- **Hotfixes**: Update specific sections without version change
+
 ---
 
 **Agent Guidelines Version**: 1.0  
