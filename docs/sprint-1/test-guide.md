@@ -144,9 +144,13 @@ curl http://localhost:8055/items/gtins
 #### 4.1 Web Interface Testen
 1. **Ga naar:** http://localhost:8080
 2. **Login:**
-   - Username: `airflow_user`
-   - Password: `airflow_secure_password`
-3. **Verwacht:** Airflow dashboard
+   - Username: `admin`
+   - Password: *Checken Airflow container logs voor gegenereerd wachtwoord*
+3. **Wachtwoord vinden:**
+   ```bash
+   docker-compose logs airflow | grep "Password for user 'admin'"
+   ```
+4. **Verwacht:** Airflow dashboard
 
 #### 4.2 DAGs Controleren
 1. **Ga naar DAGs tab**
@@ -154,6 +158,8 @@ curl http://localhost:8055/items/gtins
    - `gtin_validator_dag`
    - `gtin_example_dag`
 3. **Activeer een DAG** door op de toggle te klikken
+
+**Let op:** DAGs moeten eerst worden geplaatst in `airflow/dags/` directory
 
 #### 4.3 DAG Uitvoeren
 1. **Klik op `gtin_example_dag`**
@@ -201,13 +207,17 @@ cd frontend && npm run dev
 2. **Verwacht:** GTINFinder login pagina
 3. **Controleer console** voor errors
 
+**Let op:** Frontend moet Authentik SSO gebruiken voor authenticatie
+
 #### 6.3 GTIN Validatie Testen
-1. **Login** (als Authentik is geconfigureerd)
+1. **Login** via Authentik SSO (als geconfigureerd)
 2. **Ga naar dashboard**
 3. **Test GTIN input:**
    - Voer `8712345678901` in (geldig GTIN-13)
    - Voer `123` in (ongeldig)
    - Controleer validatie feedback
+
+**Let op:** Frontend moet GTIN data versturen naar Directus API
 
 #### 6.4 API Integratie Testen
 1. **Voer een geldig GTIN in**
