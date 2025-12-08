@@ -94,7 +94,7 @@ services:
       bash -c "
         airflow db migrate &&
         airflow scheduler &
-        exec airflow api-server --factory
+        exec airflow api-server
       "
     healthcheck:
       test:
