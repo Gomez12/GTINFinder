@@ -47,9 +47,14 @@ Na succesvolle setup zijn de services beschikbaar op:
 ### Airflow (Orchestration)
 - **URL**: http://localhost:8080
 - **Username**: admin
-- **Password**: *Automatisch gegenereerd*
+- **Password**: admin123
 
-**Wachtwoord vinden**:
+**Wachtwoord wijzigen**:
+```bash
+# Inloggen in Airflow UI en wachtwoord wijzigen via Profile
+```
+
+**Alternatief wachtwoord vinden**:
 ```bash
 docker-compose logs airflow | grep "Password for user 'admin'"
 ```
