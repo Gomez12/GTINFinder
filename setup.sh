@@ -82,19 +82,10 @@ EOF
 echo "✅ .env file created"
 
 echo "🚀 Starting services for initial setup..."
-docker-compose up -d postgresql redis directus authentik-server authentik-worker
+docker-compose up -d postgresql redis directus authentik-server authentik-worker airflow
 
-echo "⏳ Waiting for core services to be ready..."
-sleep 30
-
-echo "🚀 Starting Airflow initialization with PostgreSQL..."
-docker-compose up airflow-init
-
-echo "⏳ Waiting for Airflow initialization to complete..."
-sleep 30
-
-echo "🚀 Starting Airflow webserver and scheduler..."
-docker-compose up -d airflow
+echo "⏳ Waiting for services to be ready..."
+sleep 45
 
 echo "⏳ Waiting for services to be ready..."
 sleep 30
@@ -902,6 +893,9 @@ done
 
 echo "🛑 Stopping services..."
 docker-compose down
+
+echo "🗑️ Cleaning up Airflow database volume for fresh start..."
+docker volume rm gtinfinder_airflow_logs 2>/dev/null || true
 
 echo "✅ Setup completed successfully!"
 echo ""
