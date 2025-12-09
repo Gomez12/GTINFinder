@@ -1,27 +1,12 @@
-import React, { useState } from 'react';
-import { useAuth } from './AuthProvider';
+import React from 'react';
+import { useAuthentik } from './useAuthentik';
 import { Button } from '../common/Button';
 
 export const Login: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  
-  const { login } = useAuth();
+  const { login, isLoading, error } = useAuthentik();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    const result = await login(email, password);
-    
-    if (!result.success) {
-      setError(result.error || 'Login failed');
-    }
-    
-    setLoading(false);
+  const handleLogin = () => {
+    login();
   };
 
   return (
@@ -32,73 +17,38 @@ export const Login: React.FC = () => {
             Sign in to GTINFinder
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Enter your credentials to access the application
+            Use your Authentik account to access the application
           </p>
         </div>
         
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-              {error}
-            </div>
-          )}
-          
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="input mt-1"
-                placeholder="Enter your email"
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="input mt-1"
-                placeholder="Enter your password"
-              />
-            </div>
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+            Authentication error: {error.message}
           </div>
-
-          <div>
-            <Button
-              type="submit"
-              loading={loading}
-              disabled={loading || !email || !password}
-              className="w-full"
-            >
-              {loading ? 'Signing in...' : 'Sign in'}
-            </Button>
-          </div>
+        )}
+        
+        <div className="mt-8 space-y-6">
+          <Button
+            onClick={handleLogin}
+            loading={isLoading}
+            disabled={isLoading}
+            className="w-full"
+          >
+            {isLoading ? 'Redirecting to Authentik...' : 'Sign in with Authentik'}
+          </Button>
           
           <div className="text-center text-sm text-gray-600">
             <p>
+              You will be redirected to Authentik for authentication.
+            </p>
+            <p className="mt-2">
               Don't have an account?{' '}
               <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
                 Contact your administrator
               </a>
             </p>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );

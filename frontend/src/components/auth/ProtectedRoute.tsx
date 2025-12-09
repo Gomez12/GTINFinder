@@ -1,31 +1,36 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
-import { useAuth } from './AuthProvider';
+import { useAuthentik } from './useAuthentik';
+import type { ReactNode } from 'react';
 
 interface ProtectedRouteProps {
-  children: React.ReactNode;
-  redirectTo?: string;
+  children: ReactNode;
+  requiredGroups?: string[];
+  requireAdmin?: boolean;
+  fallback?: ReactNode;
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
-  children, 
-  redirectTo = '/login' 
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  requiredGroups = [],
+  requireAdmin = false,
+  fallback = <div>Access denied. Please log in.</div>,
 }) => {
-  const { loading, isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading, hasGroup, isAdmin } = useAuthentik();
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="loading-spinner w-8 h-8 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
+  if (isLoading) {
+    return <div>Loading authentication...</div>;
   }
 
   if (!isAuthenticated) {
-    return <Navigate to={redirectTo} replace />;
+    return fallback;
+  }
+
+  if (requireAdmin && !isAdmin()) {
+    return <div>Admin access required.</div>;
+  }
+
+  if (requiredGroups.length > 0 && !requiredGroups.some(group => hasGroup(group))) {
+    return <div>Insufficient permissions.</div>;
   }
 
   return <>{children}</>;

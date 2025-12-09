@@ -12,9 +12,19 @@
 git clone <repository-url>
 cd gtin-finder
 
-# Voer setup uit
+# Voer setup uit (inclusief geautomatiseerde Authentik OIDC configuratie)
 make setup
 ```
+
+**🔧 Wat de setup.sh nu automatisch doet:**
+- ✅ Genereert secure keys voor alle services
+- ✅ Start alle Docker services (PostgreSQL, Directus, Airflow, Authentik, Redis, Nginx)
+- ✅ Maakt Directus admin user aan (admin@example.com / admin123)
+- ✅ Maakt Directus collections aan (gtins, gtin_raw_data, gtin_golden_records, etc.)
+- ✅ Maakt Authentik admin user aan (akadmin / admin123)
+- ✅ **NIEUW:** Creëert automatisch OAuth2 Provider en Application voor GTINFinder
+- ✅ **NIEUW:** Configureert OIDC endpoints voor frontend SSO
+- ✅ **NIEUW:** Genereert Client ID en Secret voor frontend integratie
 
 ### Stap 2: Services starten
 ```bash
@@ -204,26 +214,43 @@ cd frontend && npm run dev
 
 #### 6.2 React App Testen
 1. **Ga naar:** http://localhost:3000
-2. **Verwacht:** GTINFinder login pagina
+2. **Verwacht:** GTINFinder login pagina met "Sign in with Authentik" knop
 3. **Controleer console** voor errors
 
-**Let op:** Frontend moet Authentik SSO gebruiken voor authenticatie
+**✅ Automatische OIDC Configuratie:** De setup.sh heeft al de volgende stappen uitgevoerd:
+- OAuth2 Provider "GTINFinder" aangemaakt in Authentik
+- Application "gtin-finder" aangemaakt in Authentik  
+- Client ID en Secret gegenereerd
+- Redirect URIs geconfigureerd voor http://localhost:3000
 
-#### 6.3 GTIN Validatie Testen
-1. **Login** via Authentik SSO (als geconfigureerd)
-2. **Ga naar dashboard**
-3. **Test GTIN input:**
+#### 6.3 SSO Login Testen (Volledig Geautomatiseerd)
+1. **Klik op "Sign in with Authentik"**
+2. **Login met Authentik credentials:**
+   - Username: `akadmin`
+   - Password: `admin123`
+3. **Verwacht:** Automatische redirect terug naar GTINFinder dashboard
+4. **Controleer:** Je bent ingelogd en ziet het dashboard
+
+**🔗 OIDC Endpoints (automatisch geconfigureerd):**
+- Discovery: http://localhost:9000/application/o/gtin-finder/.well-known/openid-configuration
+- Authorization: http://localhost:9000/application/o/authorize/
+- Token: http://localhost:9000/application/o/token/
+- JWKS: http://localhost:9000/application/o/gtin-finder/jwks/
+
+#### 6.4 GTIN Validatie Testen
+1. **Na succesvolle login,** ga naar dashboard
+2. **Test GTIN input:**
    - Voer `8712345678901` in (geldig GTIN-13)
    - Voer `123` in (ongeldig)
    - Controleer validatie feedback
 
-**Let op:** Frontend moet GTIN data versturen naar Directus API
-
-#### 6.4 API Integratie Testen
+#### 6.5 API Integratie Testen
 1. **Voer een geldig GTIN in**
 2. **Klik op "Add GTIN"**
-3. **Controleer of data wordt opgeslagen**
+3. **Controleer of data wordt opgeslagen** in Directus
 4. **Refresh pagina** om opgeslagen data te zien
+
+**🎯 Test Resultaat:** Als alle stappen werken, is de volledige SSO flow geautomatiseerd en functioneel!
 
 ### Test 7: End-to-End Flow
 
@@ -329,14 +356,20 @@ docker-compose up -d authentik
 ## 🎯 **Sprint 1 Acceptance Criteria**
 
 ### ✅ **Must Pass Tests**
-- [ ] Alle 6 Docker services draaien gezond
+- [ ] Alle 6 Docker services draaien
 - [ ] PostgreSQL database bevat GTIN schema
 - [ ] Directus admin interface toegankelijk
 - [ ] Airflow web UI toont DAGs
-- [ ] Authentik SSO provider geconfigureerd
+- [ ] **Authentik SSO provider automatisch geconfigureerd** ✅
 - [ ] React frontend laadt zonder errors
 - [ ] GTIN validatie werkt real-time
 - [ ] Data wordt opgeslagen in database
+
+### 🔧 **Nieuw: Geautomatiseerde Setup**
+- [ ] **make setup** creëert automatisch OIDC Provider en Application
+- [ ] **SSO login flow** werkt zonder handmatige configuratie
+- [ ] **Frontend environment variables** automatisch correct ingesteld
+- [ ] **OIDC endpoints** direct beschikbaar na setup
 
 ### ✅ **Nice-to-Have Tests**
 - [ ] Airflow DAGs draaien succesvol

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Silent Renew</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+        .renew-container {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="renew-container">
+        <h2>Renewing session...</h2>
+        <p>Please wait while we renew your authentication session.</p>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/oidc-client-ts@2.4.0/dist/oidc-client-ts.min.js"></script>
+    <script>
+        new Oidc.UserManager({
+            response_mode: 'query'
+        }).signinSilentCallback();
+    </script>
+</body>
+</html>

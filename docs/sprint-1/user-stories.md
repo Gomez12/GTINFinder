@@ -304,21 +304,29 @@
 
 ### Tasks
 #### Frontend
-- [ ] Installeer OIDC client library
-- [ ] Configureer OIDC settings
-- [ ] Implementeer login component
-- [ ] Implementeer protected routes
-- [ ] Implementeer logout functionaliteit
-- [ ] Test complete auth flow
-- [ ] Implementeer error handling
-- [ ] Test token refresh mechanisme
+- [x] Installeer OIDC client library
+- [x] Configureer OIDC settings
+- [x] Implementeer login component
+- [x] Implementeer protected routes
+- [x] Implementeer logout functionaliteit
+- [x] Test complete auth flow
+- [x] Implementeer error handling
+- [x] Test token refresh mechanisme
+
+#### Backend/Infra (NIEUW)
+- [x] **Automatiseer Authentik OIDC Provider setup via setup.sh**
+- [x] **Automatiseer Authentik Application setup via setup.sh**
+- [x] **Configureer OIDC endpoints voor frontend integratie**
+- [x] **Genereer Client ID en Secret automatisch**
 
 ### Definition of Done
-- [ ] Login flow werkt end-to-end
-- [ ] User is correct geauthenticeerd
-- [ ] Protected routes zijn beveiligd
-- [ ] Logout werkt correct
-- [ ] Token refresh werkt automatisch
+- [x] Login flow werkt end-to-end
+- [x] User is correct geauthenticeerd
+- [x] Protected routes zijn beveiligd
+- [x] Logout werkt correct
+- [x] Token refresh werkt automatisch
+- [x] **OIDC Provider en Application automatisch geconfigureerd**
+- [x] **make setup bevat volledige SSO automatisering**
 
 ### Estimation
 **Story Points:** 5  

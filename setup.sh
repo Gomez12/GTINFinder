@@ -853,16 +853,20 @@ else
     echo "4. Create the collections manually"
 fi
 
-echo "🔧 Setting up Authentik admin password..."
+echo "🔧 Setting up Authentik admin password and OIDC configuration..."
 # Wait for Authentik to be ready
 echo "⏳ Waiting for Authentik to be ready..."
 for i in {1..12}; do
     if curl -s http://localhost:9000/-/health/ready/ > /dev/null 2>&1; then
-        echo "✅ Authentik is ready, setting up admin user..."
+        echo "✅ Authentik is ready, setting up admin user and OIDC..."
         # Wait for Authentik to be ready and create/update admin password
         docker-compose exec -T authentik-server python manage.py shell -c "
-from authentik.core.models import User;
-from django.contrib.auth import get_user_model;
+from authentik.core.models import User
+from authentik.providers.oauth2.models import OAuth2Provider, ClientTypes
+from authentik.flows.models import Flow
+from authentik.core.models import Application
+from authentik.crypto.models import CertificateKeyPair
+
 try:
     u = User.objects.get(username='akadmin');
     u.set_password('admin123');
@@ -876,7 +880,54 @@ except User.DoesNotExist:
         name='Admin User'
     );
     print('Created akadmin user with password admin123')
-" && echo "✅ Authentik admin user setup completed" && break
+
+# Setup OIDC Provider and Application
+print('Setting up OIDC Provider and Application...')
+
+# Get authentication flow
+auth_flow = Flow.objects.filter(slug='default-authentication-flow').first()
+if not auth_flow:
+    print('❌ Default authentication flow not found')
+    exit(1)
+
+# Check if provider already exists
+existing_provider = OAuth2Provider.objects.filter(name='GTINFinder').first()
+if existing_provider:
+    print('⚠️  Provider GTINFinder already exists')
+    provider = existing_provider
+else:
+    # Create OAuth2 Provider
+    provider = OAuth2Provider.objects.create(
+        name='GTINFinder',
+        authorization_flow=auth_flow,
+        client_type=ClientTypes.CONFIDENTIAL,
+        sub_mode='user_id',
+        issuer_mode='per_provider',
+        redirect_uris='http://localhost:3000/*\nhttp://localhost:3000/silent-renew.html',
+    )
+    print(f'✅ Created OAuth2 Provider: {provider.name}')
+    print(f'   Client ID: {provider.client_id}')
+    print(f'   Client Secret: {provider.client_secret}')
+
+# Check if application already exists
+existing_app = Application.objects.filter(slug='gtin-finder').first()
+if existing_app:
+    print('⚠️  Application gtin-finder already exists')
+    app = existing_app
+else:
+    # Create Application
+    app = Application.objects.create(
+        name='GTINFinder',
+        slug='gtin-finder',
+        provider=provider,
+        meta_launch_url='http://localhost:3000',
+        policy_engine_mode='any',
+    )
+    print(f'✅ Created Application: {app.name}')
+    print(f'   Slug: {app.slug}')
+
+print('🎉 Authentik OIDC setup completed successfully!')
+" && echo "✅ Authentik admin user and OIDC setup completed" && break
     fi
     
     if [ $i -eq 12 ]; then
