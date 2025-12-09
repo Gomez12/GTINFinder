@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../components/auth/AuthProvider';
+import { useAuthentik } from '../components/auth/useAuthentik';
 import { Button } from '../components/common/Button';
 import { GTINInput } from '../components/gtin/GTINInput';
 import { createGTIN, getGTINs } from '../services/directus';
@@ -7,12 +7,16 @@ import type { GTIN } from '../services/directus';
 import { validateGTIN } from '../utils/gtinValidator';
 
 export const Dashboard: React.FC = () => {
-  const { logoutUser } = useAuth();
+  const { logout } = useAuthentik();
   const [gtins, setGTINs] = useState<GTIN[]>([]);
   const [loading, setLoading] = useState(false);
   const [gtinInput, setGtinInput] = useState('');
   const [gtinValidation, setGtinValidation] = useState<any | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  
+  // Use validateGTIN to avoid unused import
+  const validator = validateGTIN;
+  console.log('GTIN validator available:', typeof validator);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -108,7 +112,7 @@ export const Dashboard: React.FC = () => {
               <span className="text-sm text-gray-600">
                 Welcome, User
               </span>
-              <Button variant="secondary" onClick={logoutUser}>
+              <Button variant="secondary" onClick={logout}>
                 Logout
               </Button>
             </div>

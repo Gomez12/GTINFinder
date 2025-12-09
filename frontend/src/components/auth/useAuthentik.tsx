@@ -10,37 +10,33 @@ interface AuthentikUser extends User {
 
 export const useAuthentik = () => {
   const auth = useAuth();
-
+  
   const login = () => {
     auth.signinRedirect();
   };
-
+  
   const logout = () => {
     auth.signoutRedirect();
   };
-
+  
   const getAccessToken = () => {
     return auth.user?.access_token;
   };
-
-  const isAuthenticated = () => {
-    return auth.isAuthenticated;
-  };
-
+  
   const getUserGroups = (): string[] => {
     const user = auth.user as AuthentikUser;
     return user?.groups || [];
   };
-
+  
   const hasGroup = (group: string): boolean => {
     return getUserGroups().includes(group);
   };
-
+  
   const isAdmin = (): boolean => {
     const user = auth.user as AuthentikUser;
     return user?.is_staff || user?.is_superuser || false;
   };
-
+  
   return {
     // Auth state
     user: auth.user as AuthentikUser | null,

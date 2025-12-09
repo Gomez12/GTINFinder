@@ -22,6 +22,10 @@ const AppContent: React.FC = () => {
     );
   }
 
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
   return (
     <Router>
       <Routes>

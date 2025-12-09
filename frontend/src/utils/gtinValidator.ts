@@ -90,7 +90,7 @@ const calculateChecksum = (gtin: string): number => {
       multipliers.push(1); // Extra multiplier for position 13
       break;
     case 14: // GTIN-14
-      multipliers = Array(7).fill(0).flatMap((_, i) => [3, 1]);
+      multipliers = Array(7).fill(0).flatMap((_) => [3, 1]);
       break;
     default:
       return -1;
